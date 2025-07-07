@@ -13,6 +13,10 @@ router.post('/login', async (req, res) => {
     const valid = await foundUser.validatePassword(password);
     if (!valid) return res.status(401).json({ message: 'Invalid password' });
 
+    if (!process.env.JWT_SECRET) {
+      return res.status(500).json({ message: 'JWT secret is not set in environment variables' });
+    }
+
     const token = jwt.sign({
       id: foundUser.id,
       role: foundUser.role,
@@ -21,6 +25,7 @@ router.post('/login', async (req, res) => {
 
     res.json({
       token,
+      success: true,
       user: {
         id: foundUser.id,
         role: foundUser.role,
@@ -34,3 +39,4 @@ router.post('/login', async (req, res) => {
 });
 
 module.exports = router;
+
