@@ -14,6 +14,9 @@ app.use('/auth', authRouter);
 const dashboardRouter = require('./routes/dashboard');
 app.use('/admin/dashboard', dashboardRouter);
 
+const catalogRoutes = require('./routes/catalogs');
+app.use('/admin/catalogs', catalogRoutes);
+
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
