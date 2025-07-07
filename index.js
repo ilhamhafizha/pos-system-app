@@ -17,6 +17,11 @@ app.use('/admin/dashboard', dashboardRouter);
 const catalogRoutes = require('./routes/catalogs');
 app.use('/admin/catalogs', catalogRoutes);
 
+const adminOrderRoutes = require('./routes/adminOrder');
+app.use('/admin', adminOrderRoutes);
+
+const adminSettingsRoute = require('./routes/adminSettings');
+app.use('/admin/settings', adminSettingsRoute);
 
 app.get('/', (req, res) => {
   res.send('API is running...');
