@@ -11,6 +11,9 @@ app.use(express.urlencoded({ extended: true }));
 const authRouter = require('./routes/auth');
 app.use('/auth', authRouter);
 
+const dashboardRouter = require('./routes/dashboard');
+app.use('/admin/dashboard', dashboardRouter);
+
 app.get('/', (req, res) => {
   res.send('API is running...');
 });

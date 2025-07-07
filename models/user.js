@@ -4,7 +4,13 @@ const bcrypt = require('bcryptjs');
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
-    static associate(models) { }
+    static associate(models) {
+      // Definisikan asosiasi di sini
+      User.hasMany(models.TransactionGroup, {
+        foreignKey: 'user_id',
+        as: 'transactions'
+      });
+    }
 
     validatePassword(inputPassword) {
       return bcrypt.compare(inputPassword, this.password);
