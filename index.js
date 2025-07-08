@@ -23,6 +23,9 @@ app.use('/admin', adminOrderRoutes);
 const adminSettingsRoute = require('./routes/adminSettings');
 app.use('/admin/settings', adminSettingsRoute);
 
+const adminSalesReport = require('./routes/adminSalesReport');
+app.use('/admin', adminSalesReport);
+
 app.get('/', (req, res) => {
   res.send('API is running...');
 });

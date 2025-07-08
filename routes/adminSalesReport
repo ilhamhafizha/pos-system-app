@@ -1,0 +1,81 @@
+const express = require('express');
+const router = express.Router();
+const { Op } = require('sequelize');
+const { TransactionGroup, TransactionItem, Catalog } = require('../models');
+
+// router.get('/admin/sales-report') → disesuaikan agar endpointnya jelas
+router.get('/sales-report', async (req, res) => {
+  try {
+    const { start, finish, category, orderType, search, export: exportType } = req.query;
+
+    const whereClause = {};
+
+    // ✅ Filter tanggal diperluas ke jam 23:59:59 agar satu hari penuh
+    if (start && finish) {
+      const startDate = new Date(start);
+      startDate.setHours(0, 0, 0, 0); // Jam 00:00
+
+      const finishDate = new Date(finish);
+      finishDate.setHours(23, 59, 59, 999); // Jam 23:59
+
+      whereClause.createdAt = {
+        [Op.between]: [startDate, finishDate],
+      };
+    }
+
+
+    // ✅ Filter tipe pesanan
+    if (orderType) {
+      whereClause.transaction_type = orderType;
+    }
+
+    // ✅ Filter pencarian berdasarkan nama / nomor order
+    if (search) {
+      whereClause[Op.or] = [
+        { customer_name: { [Op.iLike]: `%${search}%` } },
+        { order_number: { [Op.iLike]: `%${search}%` } }
+      ];
+    }
+
+    // ✅ Include relasi ke item dan catalog
+    const includeItems = {
+      model: TransactionItem,
+      include: [
+        {
+          model: Catalog,
+          attributes: ['name', 'category', 'price'],
+          ...(category && { where: { category } })
+        }
+      ]
+    };
+
+    // ✅ Ambil data transaksi berdasarkan filter
+    const transactions = await TransactionGroup.findAll({
+      where: whereClause,
+      include: [includeItems],
+      order: [['createdAt', 'DESC']]
+    });
+
+    // Export Excel atau PDF (jika diminta)
+    if (exportType === 'excel') {
+      return res.status(501).json({ message: 'Export Excel belum diimplementasi' });
+    }
+
+    if (exportType === 'pdf') {
+      return res.status(501).json({ message: 'Export PDF belum diimplementasi' });
+    }
+
+    // ✅ Kirim hasil data ke frontend
+    res.json({
+      message: "Sales report retrieved successfully",
+      success: true,
+      data: transactions
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
+module.exports = router;
