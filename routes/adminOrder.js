@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { TransactionGroup, TransactionItem, Catalog } = require('../models');
+const { auth, authorizeRole } = require('../middlewares/auth');
 
-router.get('/orders', async (req, res) => {
+router.get('/orders', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const orders = await TransactionGroup.findAll({
       include: [
@@ -26,7 +27,7 @@ router.get('/orders', async (req, res) => {
   }
 });
 
-router.get('/orders/:id', async (req, res) => {
+router.get('/orders/:id', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -115,7 +116,7 @@ router.get('/orders/:id', async (req, res) => {
 //   }
 // });
 
-router.get('/orders/detail-transaction/:id', async (req, res) => {
+router.get('/orders/detail-transaction/:id', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -175,7 +176,5 @@ function formatOrderDate(date) {
   const options = { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false };
   return new Intl.DateTimeFormat('id-ID', options).format(date);
 }
-
-
 
 module.exports = router;

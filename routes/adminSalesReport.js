@@ -4,9 +4,10 @@ const { Op } = require('sequelize');
 const { TransactionGroup, TransactionItem, Catalog } = require('../models');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
+const { auth, authorizeRole } = require('../middlewares/auth');
 
 // GET /admin/sales-report
-router.get('/sales-report', async (req, res) => {
+router.get('/sales-report', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const { start, finish, category, orderType, search, export: exportType } = req.query;
 
