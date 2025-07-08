@@ -1,8 +1,10 @@
 'use strict';
+  
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     await queryInterface.bulkInsert('Catalogs', [
       {
+        id: 1,
         image: 'https://dummyimage.com/food1.jpg',
         name: 'Nasi Goreng',
         category: 'foods',
@@ -13,6 +15,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
+        id: 2,
         image: 'https://dummyimage.com/beverage1.jpg',
         name: 'Es Teh Manis',
         category: 'beverages',
@@ -23,6 +26,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
+        id: 3,
         image: 'https://dummyimage.com/dessert1.jpg',
         name: 'Pudding Coklat',
         category: 'dessert',
@@ -32,8 +36,12 @@ module.exports = {
         createdAt: new Date(),
         updatedAt: new Date()
       }
-    ]);
+    ], {});
+
+    // Reset auto increment sequence
+    await queryInterface.sequelize.query(`ALTER SEQUENCE "Catalogs_id_seq" RESTART WITH 4`);
   },
+
   down: async (queryInterface, Sequelize) => {
     await queryInterface.bulkDelete('Catalogs', null, {});
   }
