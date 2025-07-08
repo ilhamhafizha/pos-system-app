@@ -2,34 +2,29 @@ const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
 const { TransactionGroup, TransactionItem, Catalog } = require('../models');
+const ExcelJS = require('exceljs');
+const PDFDocument = require('pdfkit');
 
-// router.get('/admin/sales-report') → disesuaikan agar endpointnya jelas
 router.get('/sales-report', async (req, res) => {
   try {
     const { start, finish, category, orderType, search, export: exportType } = req.query;
 
     const whereClause = {};
 
-    // ✅ Filter tanggal diperluas ke jam 23:59:59 agar satu hari penuh
     if (start && finish) {
       const startDate = new Date(start);
-      startDate.setHours(0, 0, 0, 0); // Jam 00:00
-
+      startDate.setHours(0, 0, 0, 0);
       const finishDate = new Date(finish);
-      finishDate.setHours(23, 59, 59, 999); // Jam 23:59
-
+      finishDate.setHours(23, 59, 59, 999);
       whereClause.createdAt = {
         [Op.between]: [startDate, finishDate],
       };
     }
 
-
-    // ✅ Filter tipe pesanan
     if (orderType) {
       whereClause.transaction_type = orderType;
     }
 
-    // ✅ Filter pencarian berdasarkan nama / nomor order
     if (search) {
       whereClause[Op.or] = [
         { customer_name: { [Op.iLike]: `%${search}%` } },
@@ -37,7 +32,6 @@ router.get('/sales-report', async (req, res) => {
       ];
     }
 
-    // ✅ Include relasi ke item dan catalog
     const includeItems = {
       model: TransactionItem,
       include: [
@@ -49,23 +43,105 @@ router.get('/sales-report', async (req, res) => {
       ]
     };
 
-    // ✅ Ambil data transaksi berdasarkan filter
     const transactions = await TransactionGroup.findAll({
       where: whereClause,
       include: [includeItems],
       order: [['createdAt', 'DESC']]
     });
 
-    // Export Excel atau PDF (jika diminta)
+    // ✅ Export to Excel
     if (exportType === 'excel') {
-      return res.status(501).json({ message: 'Export Excel belum diimplementasi' });
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Sales Report');
+
+      worksheet.columns = [
+        { header: 'Order No', key: 'order_number', width: 15 },
+        { header: 'Date', key: 'createdAt', width: 20 },
+        { header: 'Customer', key: 'customer_name', width: 15 },
+        { header: 'Type', key: 'transaction_type', width: 10 },
+        { header: 'Table', key: 'table', width: 10 },
+        { header: 'Item', key: 'item', width: 20 },
+        { header: 'Qty', key: 'quantity', width: 5 },
+        { header: 'Price', key: 'price', width: 10 },
+        { header: 'Subtotal', key: 'subtotal', width: 10 },
+        { header: 'Note', key: 'note', width: 20 },
+        { header: 'SubTotal Group', key: 'subtotal_group', width: 15 },
+        { header: 'Tax', key: 'tax', width: 10 },
+        { header: 'Total', key: 'total', width: 10 },
+        { header: 'Cash', key: 'cash', width: 10 },
+        { header: 'Cashback', key: 'cashback', width: 10 },
+      ];
+
+      transactions.forEach(tx => {
+        tx.TransactionItems.forEach(item => {
+          worksheet.addRow({
+            order_number: tx.order_number,
+            createdAt: new Date(tx.createdAt).toLocaleString('id-ID'),
+            customer_name: tx.customer_name,
+            transaction_type: tx.transaction_type,
+            table: tx.table,
+            item: item.Catalog.name,
+            quantity: item.quantity,
+            price: item.Catalog.price,
+            subtotal: item.subtotal,
+            note: item.note,
+            subtotal_group: tx.subtotal_group,
+            tax: tx.tax,
+            total: tx.total,
+            cash: tx.cash,
+            cashback: tx.cashback,
+          });
+        });
+      });
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', 'attachment; filename=sales-report.xlsx');
+      await workbook.xlsx.write(res);
+      return res.end();
     }
 
+    // ✅ Export to PDF
     if (exportType === 'pdf') {
-      return res.status(501).json({ message: 'Export PDF belum diimplementasi' });
+      const doc = new PDFDocument({ margin: 30, size: 'A4' });
+
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="sales-report.pdf"');
+
+      doc.pipe(res);
+
+      doc.fontSize(18).text('Sales Report', { align: 'center' });
+      doc.moveDown();
+
+      transactions.forEach((tx, index) => {
+        doc
+          .fontSize(12)
+          .text(`Order No: ${tx.order_number}`)
+          .text(`Date: ${new Date(tx.createdAt).toLocaleString('id-ID')}`)
+          .text(`Customer: ${tx.customer_name}`)
+          .text(`Type: ${tx.transaction_type}`)
+          .text(`Table: ${tx.table || '-'}`)
+          .text(`Subtotal: Rp${tx.subtotal_group}`)
+          .text(`Tax: Rp${tx.tax}`)
+          .text(`Total: Rp${tx.total}`)
+          .text(`Cash: Rp${tx.cash}`)
+          .text(`Cashback: Rp${tx.cashback}`)
+          .moveDown(0.5)
+          .text('Items:', { underline: true });
+
+        tx.TransactionItems.forEach(item => {
+          doc.text(`- ${item.Catalog.name} x ${item.quantity} @Rp${item.Catalog.price} = Rp${item.subtotal} (${item.note})`);
+        });
+
+        doc.moveDown();
+        if (index !== transactions.length - 1) doc.moveTo(doc.x, doc.y).lineTo(550, doc.y).stroke();
+        doc.moveDown();
+      });
+
+      doc.end();
+      return;
     }
 
-    // ✅ Kirim hasil data ke frontend
+    // ✅ JSON Response (non-export)
     res.json({
       message: "Sales report retrieved successfully",
       success: true,
