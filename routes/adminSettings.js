@@ -1,11 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../middlewares/auth');
 const { User } = require('../models');
 const bcrypt = require('bcryptjs');
+const { auth, authorizeRole } = require('../middlewares/auth');
 
 // GET /admin/settings → Ambil profil admin
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id, {
       attributes: [
@@ -33,7 +33,7 @@ router.get('/', auth, async (req, res) => {
 });
 
 // PUT /admin/settings → Update profil admin
-router.put('/', auth, async (req, res) => {
+router.put('/', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const { name, email, username, avatar, status, language } = req.body;
 
@@ -65,7 +65,7 @@ router.put('/', auth, async (req, res) => {
 });
 
 // PUT /admin/settings/password → Ganti password
-router.put('/password', auth, async (req, res) => {
+router.put('/password', auth, authorizeRole('admin'), async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const user = await User.findByPk(req.user.id);
