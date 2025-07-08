@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { TransactionGroup, TransactionItem, Catalog, sequelize } = require('../models');
-const { Op, fn, col } = require('sequelize');
+const { Op, fn, col, literal } = require('sequelize');
 
 // Summary: total order & total omset hari ini
 router.get('/summary', async (req, res) => {
@@ -58,6 +58,61 @@ router.get('/top-category', async (req, res) => {
   }
 });
 
+router.get('/', async (req, res) => {
+  try {
+    // Total Orders
+    const totalOrders = await TransactionGroup.count();
+
+    // Total Omzet
+    const orders = await TransactionGroup.findAll();
+    const totalOmzet = orders.reduce((sum, order) => sum + order.total, 0);
+
+    // Semua item menu yang terjual (allMenuOrders)
+    const allItems = await TransactionItem.findAll({
+      include: {
+        model: Catalog,
+        attributes: ['category']
+      }
+    });
+
+    const dataCategory = {
+      foods: 0,
+      beverages: 0,
+      deserts: 0,
+    };
+
+    let allMenuOrders = 0;
+
+    allItems.forEach(item => {
+      const category = item.Catalog.category;
+
+      if (category === 'foods') {
+        dataCategory.foods += item.quantity;
+      } else if (category === 'beverages') {
+        dataCategory.beverages += item.quantity;
+      } else if (category === 'dessert' || category === 'deserts') {
+        dataCategory.deserts += item.quantity; // typo handle
+      }
+
+      allMenuOrders += item.quantity;
+    });
+
+    res.json({
+      message: 'Admin dashboard accessed successfully',
+      success: true,
+      data: {
+        totalOrders,
+        totalOmzet,
+        allMenuOrders,
+        ...dataCategory
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
 // Chart: Total subtotal transaksi per hari
 router.get('/chart', async (req, res) => {
   try {
@@ -75,6 +130,61 @@ router.get('/chart', async (req, res) => {
     });
 
     res.json(items);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
+router.get('/omzet', async (req, res) => {
+  try {
+    const items = await TransactionItem.findAll({
+      include: [
+        {
+          model: TransactionGroup,
+          attributes: ['createdAt']
+        },
+        {
+          model: Catalog,
+          attributes: ['category']
+        }
+      ],
+      raw: true
+    });
+
+    const chartMap = {};
+
+    for (const item of items) {
+      const date = new Date(item['TransactionGroup.createdAt']).toLocaleDateString('id-ID');
+      const category = item['Catalog.category'];
+      const qty = item.quantity;
+
+      if (!chartMap[date]) {
+        chartMap[date] = {
+          date,
+          foods: 0,
+          beverages: 0,
+          deserts: 0
+        };
+      }
+
+      if (category === 'foods') {
+        chartMap[date].foods += qty;
+      } else if (category === 'beverages') {
+        chartMap[date].beverages += qty;
+      } else if (category === 'dessert' || category === 'deserts') {
+        chartMap[date].deserts += qty;
+      }
+    }
+
+    const result = Object.values(chartMap);
+
+    res.json({
+      message: 'Admin omzet accessed successfully',
+      success: true,
+      data: result
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error', error });
