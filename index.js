@@ -26,6 +26,10 @@ app.use('/admin/settings', adminSettingsRoute);
 const adminSalesReport = require('./routes/adminSalesReport');
 app.use('/admin', adminSalesReport);
 
+const cashierDashboardRouter = require('./routes/cashierDashboard');
+app.use('/cashier/dashboard', cashierDashboardRouter);
+
+
 app.get('/', (req, res) => {
   res.send('API is running...');
 });
