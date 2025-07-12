@@ -178,30 +178,51 @@ const dashboardCashier = {
   getReceipt: async (req, res) => {
     try {
       const { transactionGroupId } = req.params;
-
+  
       const transaction = await TransactionGroup.findByPk(transactionGroupId, {
         include: [{
           model: TransactionItem,
-          as: 'TransactionItems' // ⬅️ gunakan alias sesuai relasi
+          as: 'TransactionItems',
+          include: [{
+            model: Catalog,
+            attributes: ['name', 'price']
+          }]
         }]
       });
-
+  
       if (!transaction) {
         return res.status(404).json({ message: 'Transaction not found' });
       }
-
+  
+      // Format item menjadi lebih rapi
+      const items = transaction.TransactionItems.map(item => ({
+        menu: item.Catalog.name,
+        quantity: item.quantity,
+        price: item.Catalog.price,
+        subtotal: item.subtotal
+      }));
+  
       res.json({
         success: true,
         message: 'Receipt retrieved successfully',
-        data: transaction
+        data: {
+          order_number: transaction.order_number,
+          customer_name: transaction.customer_name,
+          table: transaction.table,
+          transaction_type: transaction.transaction_type,
+          items,
+          subtotal: transaction.subtotal_group,
+          tax: transaction.tax,
+          total: transaction.total,
+          cash: transaction.cash,
+          cashback: transaction.cashback
+        }
       });
     } catch (error) {
       console.error(error);
       res.status(500).json({ message: 'Internal server error', error });
     }
   }
-
-
 
 };
 
