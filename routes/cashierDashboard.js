@@ -33,5 +33,19 @@ router.get(
   dashboardCashier.getReceipt
 );
 
+router.put(
+  '/orders/items/:transactionItemId/note',
+  auth('cashier'),
+  dashboardCashier.updateItemNote
+);
+
+router.get(
+  '/orders/history',
+  auth('cashier'),
+  dashboardCashier.getOrderHistory
+);
+
+
+
 
 module.exports = router;

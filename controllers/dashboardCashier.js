@@ -178,7 +178,7 @@ const dashboardCashier = {
   getReceipt: async (req, res) => {
     try {
       const { transactionGroupId } = req.params;
-  
+
       const transaction = await TransactionGroup.findByPk(transactionGroupId, {
         include: [{
           model: TransactionItem,
@@ -189,11 +189,11 @@ const dashboardCashier = {
           }]
         }]
       });
-  
+
       if (!transaction) {
         return res.status(404).json({ message: 'Transaction not found' });
       }
-  
+
       // Format item menjadi lebih rapi
       const items = transaction.TransactionItems.map(item => ({
         menu: item.Catalog.name,
@@ -201,7 +201,7 @@ const dashboardCashier = {
         price: item.Catalog.price,
         subtotal: item.subtotal
       }));
-  
+
       res.json({
         success: true,
         message: 'Receipt retrieved successfully',
@@ -222,7 +222,56 @@ const dashboardCashier = {
       console.error(error);
       res.status(500).json({ message: 'Internal server error', error });
     }
+  },
+
+  updateItemNote: async (req, res) => {
+    try {
+      const { transactionItemId } = req.params;
+      const { note } = req.body;
+
+      const item = await TransactionItem.findByPk(transactionItemId);
+      if (!item) return res.status(404).json({ message: 'Item not found' });
+
+      item.note = note;
+      await item.save();
+
+      res.json({
+        success: true,
+        message: 'Note updated successfully',
+        data: item
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
+  },
+
+
+  getOrderHistory: async (req, res) => {
+    try {
+      const history = await TransactionGroup.findAll({
+        include: [
+          {
+            model: TransactionItem,
+            as: 'TransactionItems',
+            include: [{ model: Catalog }]
+          }
+        ],
+        order: [['createdAt', 'DESC']]
+      });
+
+      res.json({
+        success: true,
+        message: 'Order history fetched',
+        data: history
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
   }
+
+
 
 };
 
