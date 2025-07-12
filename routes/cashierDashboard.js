@@ -23,9 +23,14 @@ router.delete(
 
 router.put(
   '/orders/:transactionGroupId/pay',
-
   auth('cashier'),
   dashboardCashier.processPayment
+);
+
+router.get(
+  '/orders/:transactionGroupId/receipt',
+  auth('cashier'),
+  dashboardCashier.getReceipt
 );
 
 

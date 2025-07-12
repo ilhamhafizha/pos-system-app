@@ -131,7 +131,6 @@ const dashboardCashier = {
         ]
       });
 
-
       if (!transaction) return res.status(404).json({ message: 'Transaction not found' });
 
       // Hitung subtotal dari semua item
@@ -173,7 +172,35 @@ const dashboardCashier = {
     }
 
 
+  },
+
+  // Tambahkan ini di controllers/dashboardCashier.js
+  getReceipt: async (req, res) => {
+    try {
+      const { transactionGroupId } = req.params;
+
+      const transaction = await TransactionGroup.findByPk(transactionGroupId, {
+        include: [{
+          model: TransactionItem,
+          as: 'TransactionItems' // ⬅️ gunakan alias sesuai relasi
+        }]
+      });
+
+      if (!transaction) {
+        return res.status(404).json({ message: 'Transaction not found' });
+      }
+
+      res.json({
+        success: true,
+        message: 'Receipt retrieved successfully',
+        data: transaction
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: 'Internal server error', error });
+    }
   }
+
 
 
 };
