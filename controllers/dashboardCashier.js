@@ -269,8 +269,25 @@ const dashboardCashier = {
       console.error(error);
       res.status(500).json({ message: 'Internal server error', error });
     }
-  }
+  },
 
+  getOrderHistory: async (req, res) => {
+    try {
+      const orders = await TransactionGroup.findAll({
+        where: { user_id: req.user.id },
+        attributes: ['id', 'order_number', 'transaction_type', 'customer_name', 'table', 'total'],
+        order: [['createdAt', 'DESC']]
+      });
+
+      res.json({
+        success: true,
+        message: 'Order history retrieved successfully',
+        data: orders
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Failed to get order history', error });
+    }
+  }
 
 
 };
