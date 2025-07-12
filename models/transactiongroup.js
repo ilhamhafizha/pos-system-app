@@ -8,10 +8,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'user_id',
         as: 'user'
       });
-      
+
       TransactionGroup.hasMany(models.TransactionItem, {
-        foreignKey: 'transaction_group_id'
+        foreignKey: 'transaction_group_id',
+        as: 'TransactionItems' // <== tambahkan alias ini
       });
+
     }
   }
 
