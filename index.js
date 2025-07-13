@@ -32,6 +32,9 @@ app.use('/cashier/dashboard', cashierDashboardRouter);
 const cashierSalesReportRoutes = require('./routes/cashierSalesReport');
 app.use('/cashier/', cashierSalesReportRoutes);
 
+const cashierSettingsRoute = require('./routes/cashierSettings');
+app.use('/cashier/settings', cashierSettingsRoute);
+
 
 app.get('/', (req, res) => {
   res.send('API is running...');
