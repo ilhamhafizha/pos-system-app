@@ -7,7 +7,8 @@ module.exports = (sequelize, DataTypes) => {
       // Relasi: TransactionItem milik satu TransactionGroup
       TransactionItem.belongsTo(models.TransactionGroup, {
         foreignKey: 'transaction_group_id',
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
+        as: 'TransactionGroup'
       });
 
       // Relasi: TransactionItem milik satu Catalog
