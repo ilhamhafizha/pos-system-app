@@ -21,9 +21,8 @@ const Header = () => {
   };
 
   return (
-    <header className="w-full bg-white shadow px-6 py-4 flex justify-between items-center">
-      <h1 className="text-xl font-bold text-blue-600">POS Kasir</h1>
-
+    <header className="w-full bg-white px-6 py-4 flex justify-end items-center">
+      {/* Kanan: Navigasi dan User */}
       <div className="flex items-center gap-4 text-sm">
         <button
           onClick={() => navigate("/cashier/history")}
@@ -31,9 +30,11 @@ const Header = () => {
         >
           Riwayat Transaksi
         </button>
+
         <span className="text-gray-700 font-medium capitalize">
           {userInfo.username} ({userInfo.role})
         </span>
+
         <button
           onClick={handleLogout}
           className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"

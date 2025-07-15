@@ -70,49 +70,6 @@ const CashierDashboard = () => {
     }
   };
 
-  // const handleAddToOrder = async (menu) => {
-  //   if (!orderId) return;
-
-  //   const existingItem = orderItems.find((item) => item.catalog.id === menu.id);
-  //   const quantity = existingItem ? existingItem.quantity + 1 : 1;
-  //   const note = existingItem?.note || "";
-
-  //   try {
-  //     const token = JSON.parse(localStorage.getItem("user"))?.token;
-  //     const res = await axios.post(
-  //       `http://localhost:3000/cashier/dashboard/orders/${orderId}/items`,
-  //       {
-  //         catalog_id: menu.id,
-  //         quantity,
-  //         note,
-  //       },
-  //       {
-  //         headers: {
-  //           Authorization: `Bearer ${token}`,
-  //         },
-  //       }
-  //     );
-
-  //     const itemId = res.data?.data?.id;
-
-  //     if (existingItem) {
-  //       setOrderItems((prev) =>
-  //         prev.map((item) => (item.catalog.id === menu.id ? { ...item, quantity } : item))
-  //       );
-  //     } else {
-  //       const newItem = {
-  //         id: itemId,
-  //         quantity,
-  //         note,
-  //         catalog: menu,
-  //       };
-  //       setOrderItems((prev) => [...prev, newItem]);
-  //     }
-  //   } catch (err) {
-  //     console.error("Gagal tambah menu:", err?.response?.data || err.message);
-  //   }
-  // };
-
   const handleAddToOrder = async (menu, note = "") => {
     if (!orderId) return;
 
@@ -201,42 +158,47 @@ const CashierDashboard = () => {
     try {
       const token = JSON.parse(localStorage.getItem("user"))?.token;
 
-      // Hitung total orderan
-      const total = orderItems.reduce(
+      // Hitung subtotal dari semua item
+      const subtotal = orderItems.reduce(
         (sum, item) => sum + item.quantity * parseInt(item.catalog?.price),
         0
       );
 
-      // Konversi input cash
-      const cash = parseInt(cashAmount.toString().replace(/\D/g, ""), 10); // Hapus titik/koma jika ada
+      // Hitung PPN dan total
+      const tax = Math.round(subtotal * 0.1); // 10%
+      const total = subtotal + tax;
 
-      // Log nilai sebelum request
-      console.log("Cash input:", cash);
-      console.log("Total belanja:", total);
+      // Ambil input cash dan ubah jadi angka
+      const cash = parseInt(cashAmount.toString().replace(/\D/g, ""), 10);
 
+      // Validasi uang cash cukup
       if (isNaN(cash) || cash < total) {
         alert("Uang cash tidak cukup");
         return;
       }
 
+      // Kirim ke backend
       await axios.put(
         `http://localhost:3000/cashier/dashboard/orders/${orderId}/pay`,
-        { cash }, // Kirim sesuai ekspektasi backend
+        { cash },
         {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
-      setChange(cash - total);
+      // Set kembalian dan struk
+      const kembalian = cash - total;
+      setChange(kembalian);
+
       setReceipt({
         customer: customerName,
         table: orderType === "dine_in" ? tableNumber : null,
         items: orderItems,
+        subtotal,
+        tax,
         total,
         cash,
-        change: cash - total,
+        change: kembalian,
       });
     } catch (err) {
       console.error("Gagal bayar:", err?.response?.data || err.message);
@@ -246,8 +208,6 @@ const CashierDashboard = () => {
 
   return (
     <>
-      <Header />
-
       <div className="flex min-h-screen bg-gray-100">
         <div className="w-[70%] p-6">
           <h2 className="text-2xl font-bold mb-4">Daftar Menu</h2>
@@ -427,6 +387,7 @@ const CashierDashboard = () => {
                   <h4 className="font-bold mb-2">Struk Belanja</h4>
                   <p>Customer: {receipt.customer}</p>
                   {receipt.table && <p>Meja: {receipt.table}</p>}
+
                   <ul className="mt-2 space-y-1">
                     {receipt.items.map((item, idx) => (
                       <li key={idx} className="flex justify-between">
@@ -439,20 +400,42 @@ const CashierDashboard = () => {
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-2 flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>Rp {receipt.total.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Uang Cash</span>
-                    <span>Rp {receipt.cash.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Kembalian</span>
-                    <span>Rp {receipt.change.toLocaleString()}</span>
-                  </div>
 
-                  {/* ✅ Tambahkan tombol cetak di bawah sini */}
+                  {/* ✅ Hitung nilai PPN dan subtotal */}
+                  {(() => {
+                    const total = receipt.total || 0;
+                    const subtotal = Math.round(total / 1.1); // 10% PPN
+                    const tax = total - subtotal;
+                    const cash = receipt.cash || 0;
+                    const change = receipt.change || 0;
+
+                    return (
+                      <div className="mt-4 border-t pt-2 text-sm space-y-1">
+                        <div className="flex justify-between">
+                          <span>Subtotal</span>
+                          <span>Rp {subtotal.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>PPN</span>
+                          <span>Rp {tax.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between font-bold">
+                          <span>Total</span>
+                          <span>Rp {total.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Bayar</span>
+                          <span>Rp {cash.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-green-600 font-bold">
+                          <span>Kembalian</span>
+                          <span>Rp {change.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* ✅ Tombol cetak struk */}
                   <button
                     onClick={() => navigate("/cashier/receipt", { state: { receipt } })}
                     className="mt-4 w-full bg-gray-700 text-white py-2 rounded hover:bg-gray-800"

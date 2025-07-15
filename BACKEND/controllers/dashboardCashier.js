@@ -4,7 +4,7 @@ const { TransactionItem, TransactionGroup, Catalog } = require('../models');
 const { v4: uuidv4 } = require('uuid');
 
 const dashboardCashier = {
-  // ✅ Get menu list
+
   getMenuList: async (req, res) => {
     try {
       const menus = await Catalog.findAll({
@@ -22,41 +22,6 @@ const dashboardCashier = {
     }
   },
 
-  // ✅ Create new transaction group
-  createTransactionGroup: async (req, res) => {
-    try {
-      const { customer_name, table, transaction_type } = req.body;
-
-      if (!customer_name || !table || !transaction_type) {
-        return res.status(400).json({ message: 'customer_name, table, and transaction_type are required' });
-      }
-
-      const order_number = 'ORD-' + uuidv4().split('-')[0].toUpperCase();
-
-      const newTransaction = await TransactionGroup.create({
-        user_id: req.user.id,
-        customer_name,
-        table,
-        transaction_type,
-        order_number,
-        subtotal_group: 0,
-        tax: 0,
-        total: 0,
-        cash: 0,
-        cashback: 0
-      });
-
-      res.status(201).json({
-        success: true,
-        message: 'Transaction created successfully',
-        data: newTransaction
-      });
-    } catch (error) {
-      res.status(500).json({ message: 'Failed to create transaction', error });
-    }
-  },
-
-  // ✅ Add item to transaction
   addItemToTransaction: async (req, res) => {
     try {
       const { transactionGroupId } = req.params;
@@ -94,7 +59,6 @@ const dashboardCashier = {
       res.status(500).json({ message: 'Internal server error', error });
     }
   },
-
 
   deleteItemFromTransaction: async (req, res) => {
     try {
@@ -174,12 +138,14 @@ const dashboardCashier = {
 
   },
 
-  // Tambahkan ini di controllers/dashboardCashier.js
   getReceipt: async (req, res) => {
     try {
       const { transactionGroupId } = req.params;
 
       const transaction = await TransactionGroup.findByPk(transactionGroupId, {
+        attributes: {
+          include: ['createdAt'] // ✅ jika sebelumnya pakai exclude/include
+        },
         include: [{
           model: TransactionItem,
           as: 'TransactionItems',
@@ -210,6 +176,7 @@ const dashboardCashier = {
           customer_name: transaction.customer_name,
           table: transaction.table,
           transaction_type: transaction.transaction_type,
+          createdAt: transaction.createdAt,
           items,
           subtotal: transaction.subtotal_group,
           tax: transaction.tax,
@@ -246,10 +213,18 @@ const dashboardCashier = {
     }
   },
 
-
   getOrderHistory: async (req, res) => {
     try {
       const history = await TransactionGroup.findAll({
+        attributes: [
+          'id',
+          'order_number',
+          'transaction_type',
+          'customer_name',
+          'table',
+          'total',
+          'createdAt' // ✅ Tambahkan ini agar muncul di response
+        ],
         include: [
           {
             model: TransactionItem,
@@ -262,7 +237,7 @@ const dashboardCashier = {
 
       res.json({
         success: true,
-        message: 'Order history fetched',
+        message: 'Order history retrieved successfully',
         data: history
       });
     } catch (error) {
@@ -271,25 +246,38 @@ const dashboardCashier = {
     }
   },
 
-  getOrderHistory: async (req, res) => {
+  createTransactionGroup: async (req, res) => {
     try {
-      const orders = await TransactionGroup.findAll({
-        where: { user_id: req.user.id },
-        attributes: ['id', 'order_number', 'transaction_type', 'customer_name', 'table', 'total'],
-        order: [['createdAt', 'DESC']]
+      const { customer_name, table, transaction_type } = req.body;
+
+      if (!customer_name || !table || !transaction_type) {
+        return res.status(400).json({ message: 'customer_name, table, and transaction_type are required' });
+      }
+
+      const order_number = 'ORD-' + uuidv4().split('-')[0].toUpperCase();
+
+      const newTransaction = await TransactionGroup.create({
+        user_id: req.user.id,
+        customer_name,
+        table,
+        transaction_type,
+        order_number,
+        subtotal_group: 0,
+        tax: 0,
+        total: 0,
+        cash: 0,
+        cashback: 0
       });
 
-      res.json({
+      res.status(201).json({
         success: true,
-        message: 'Order history retrieved successfully',
-        data: orders
+        message: 'Transaction created successfully',
+        data: newTransaction
       });
     } catch (error) {
-      res.status(500).json({ message: 'Failed to get order history', error });
+      res.status(500).json({ message: 'Failed to create transaction', error });
     }
-  }
-
-
+  },
 };
 
 // ✅ Export object yang lengkap

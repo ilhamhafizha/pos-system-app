@@ -9,7 +9,7 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
+    try { 
       await axios.post("http://localhost:3000/auth/reset-password/email", { email });
       Swal.fire("Berhasil", "Email ditemukan. Silakan buat password baru.", "success");
       navigate("/reset-password", { state: { email } });

@@ -243,6 +243,7 @@ module.exports = {
     }
   },
 
+
   getTopMenusByCategory: async (req, res) => {
     try {
       const cashierId = req.user.id;
@@ -258,7 +259,7 @@ module.exports = {
           },
           {
             model: Catalog,
-            where: { category }, // filter kategori
+            where: { category },
             attributes: ['name']
           }
         ],
@@ -271,14 +272,15 @@ module.exports = {
         raw: true
       });
 
-      res.json({
+      res.status(200).json({
         success: true,
-        message: `Top menus in ${category} retrieved successfully`,
+        message: `Top menus in category '${category}' retrieved successfully`,
         data: items
       });
     } catch (err) {
       console.error(err);
       res.status(500).json({
+        success: false,
         message: 'Internal server error',
         error: err.message
       });
@@ -291,48 +293,78 @@ module.exports = {
 
       const orders = await TransactionGroup.findAll({
         where: { user_id: cashierId },
-        attributes: ['order_number', 'createdAt', 'customer_name', 'transaction_type', 'table', 'total'],
+        attributes: [
+          'order_number',
+          'createdAt',
+          'customer_name',
+          'transaction_type',
+          'table',
+          'total'
+        ],
         order: [['createdAt', 'DESC']]
       });
 
-      if (!orders.length) {
-        return res.status(404).json({ message: 'Transaction not found' });
+      if (orders.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No transactions found'
+        });
       }
 
-      res.json({
+      res.status(200).json({
         success: true,
         message: 'List of total orders retrieved',
         data: orders
       });
     } catch (err) {
-      res.status(500).json({ message: 'Internal server error', error: err.message });
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: err.message
+      });
     }
   },
 
+  // ✅ Get list of omzet
   getListTotalOmzet: async (req, res) => {
     try {
       const cashierId = req.user.id;
 
       const orders = await TransactionGroup.findAll({
         where: { user_id: cashierId },
-        attributes: ['order_number', 'createdAt', 'customer_name', 'transaction_type', 'table', 'total'],
+        attributes: [
+          'order_number',
+          'createdAt',
+          'customer_name',
+          'transaction_type',
+          'table',
+          'total'
+        ],
         order: [['createdAt', 'DESC']]
       });
 
-      if (!orders.length) {
-        return res.status(404).json({ message: 'Transaction not found' });
+      if (orders.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No omzet data found'
+        });
       }
 
-      res.json({
+      res.status(200).json({
         success: true,
         message: 'List of total omzet retrieved',
         data: orders
       });
     } catch (err) {
-      res.status(500).json({ message: 'Internal server error', error: err.message });
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: err.message
+      });
     }
   },
 
+  // ✅ Get list of all menu sales
   getListAllMenuSales: async (req, res) => {
     try {
       const cashierId = req.user.id;
@@ -354,11 +386,13 @@ module.exports = {
         order: [['quantity', 'DESC']]
       });
 
-      if (!items.length) {
-        return res.status(404).json({ message: 'Transaction item not found' });
+      if (items.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'No transaction items found'
+        });
       }
 
-      // Format data output
       const result = items.map(item => ({
         name: item.Catalog.name,
         category: item.Catalog.category,
@@ -366,16 +400,17 @@ module.exports = {
         subtotal: item.subtotal
       }));
 
-      res.json({
+      res.status(200).json({
         success: true,
         message: 'List of all menu sales retrieved',
         data: result
       });
     } catch (err) {
-      res.status(500).json({ message: 'Internal server error', error: err.message });
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: err.message
+      });
     }
   }
-
-
-
 };
