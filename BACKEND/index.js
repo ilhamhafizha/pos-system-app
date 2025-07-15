@@ -1,8 +1,10 @@
+require('dotenv').config();
+const multer = require("multer");
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 
 const app = express();
+const path = require("path");
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -35,6 +37,7 @@ app.use('/cashier/', cashierSalesReportRoutes);
 const cashierSettingsRoute = require('./routes/cashierSettings');
 app.use('/cashier/settings', cashierSettingsRoute);
 
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get('/', (req, res) => {
   res.send('API is running...');

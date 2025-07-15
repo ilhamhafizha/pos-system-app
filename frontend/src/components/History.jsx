@@ -70,7 +70,7 @@ const OrderHistory = () => {
       <table className="w-full text-left text-sm">
         <thead className="bg-gray-200">
           <tr>
-            <th className="p-3">#</th>
+            <th className="p-3">No</th>
             <th className="p-3">No Order</th>
             <th className="p-3">Tanggal</th>
             <th className="p-3">Tipe</th>

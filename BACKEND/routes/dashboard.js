@@ -1,20 +1,24 @@
 const express = require('express');
 const router = express.Router();
-const { TransactionGroup, TransactionItem, Catalog, sequelize } = require('../models');
-const { Op, fn, col, literal } = require('sequelize');
-const { auth, authorizeRole } = require('../middlewares/auth');
+const { TransactionGroup, TransactionItem, Catalog } = require('../models');
+const { Op, fn, col } = require('sequelize');
+const { auth } = require('../middlewares/auth');
 
-
-router.get('/', auth, authorizeRole('admin'), async (req, res) => {
+// Dashboard Utama
+router.get('/', auth('admin'), async (req, res) => {
   try {
+    console.log('📊 GET /admin/dashboard');
+
     // Total Orders
     const totalOrders = await TransactionGroup.count();
+    console.log('Total Orders:', totalOrders);
 
     // Total Omzet
     const orders = await TransactionGroup.findAll();
     const totalOmzet = orders.reduce((sum, order) => sum + order.total, 0);
+    console.log('Total Omzet:', totalOmzet);
 
-    // Semua item menu yang terjual (allMenuOrders)
+    // Semua item menu yang terjual
     const allItems = await TransactionItem.findAll({
       include: {
         model: Catalog,
@@ -38,13 +42,13 @@ router.get('/', auth, authorizeRole('admin'), async (req, res) => {
       } else if (category === 'beverages') {
         dataCategory.beverages += item.quantity;
       } else if (category === 'dessert' || category === 'deserts') {
-        dataCategory.deserts += item.quantity; // typo handle
+        dataCategory.deserts += item.quantity;
       }
 
       allMenuOrders += item.quantity;
     });
 
-    res.json({
+    return res.json({
       message: 'Admin dashboard accessed successfully',
       success: true,
       data: {
@@ -55,23 +59,27 @@ router.get('/', auth, authorizeRole('admin'), async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error', error });
+    console.error('🔥 Error /dashboard:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 });
 
-// Chart: Total subtotal transaksi per hari
-router.get('/omzet', auth, authorizeRole('admin'), async (req, res) => {
+// Chart per hari: jumlah item berdasarkan kategori
+router.get('/omzet', auth('admin'), async (req, res) => {
   try {
+    console.log('📊 GET /admin/dashboard/omzet');
+
     const items = await TransactionItem.findAll({
       include: [
         {
           model: TransactionGroup,
-          attributes: ['createdAt']
+          attributes: ['createdAt'],
+          required: true
         },
         {
           model: Catalog,
-          attributes: ['category']
+          attributes: ['category'],
+          required: true
         }
       ],
       raw: true
@@ -104,24 +112,28 @@ router.get('/omzet', auth, authorizeRole('admin'), async (req, res) => {
 
     const result = Object.values(chartMap);
 
-    res.json({
+    return res.json({
       message: 'Admin omzet accessed successfully',
       success: true,
       data: result
     });
 
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error', error });
+    console.error('🔥 Error /omzet:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 });
 
-router.get('/chart', auth, authorizeRole('admin'), async (req, res) => {
+// Chart per hari: omzet total per tanggal
+router.get('/chart', auth('admin'), async (req, res) => {
   try {
+    console.log('📊 GET /admin/dashboard/chart');
+
     const items = await TransactionItem.findAll({
       include: {
         model: TransactionGroup,
         attributes: [],
+        required: true
       },
       attributes: [
         [fn('DATE', col('TransactionGroup.createdAt')), 'date'],
@@ -131,16 +143,18 @@ router.get('/chart', auth, authorizeRole('admin'), async (req, res) => {
       raw: true
     });
 
-    res.json(items);
+    return res.json(items);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error', error });
+    console.error('🔥 Error /chart:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 });
 
-// Summary: total order & total omset hari ini
-router.get('/summary', auth, authorizeRole('admin'), async (req, res) => {
+// Summary hari ini
+router.get('/summary', auth('admin'), async (req, res) => {
   try {
+    console.log('📊 GET /admin/dashboard/summary');
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -155,20 +169,23 @@ router.get('/summary', auth, authorizeRole('admin'), async (req, res) => {
     const totalOrder = ordersToday.length;
     const totalOmset = ordersToday.reduce((sum, order) => sum + order.total, 0);
 
-    res.json({ totalOrder, totalOmset });
+    return res.json({ totalOrder, totalOmset });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error', error });
+    console.error('🔥 Error /summary:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 });
 
-// Top Category: berdasarkan quantity
-router.get('/top-category', auth, authorizeRole('admin'), async (req, res) => {
+// Top kategori berdasarkan quantity
+router.get('/top-category', auth('admin'), async (req, res) => {
   try {
+    console.log('📊 GET /admin/dashboard/top-category');
+
     const items = await TransactionItem.findAll({
       include: {
         model: Catalog,
-        attributes: ['category']
+        attributes: ['category'],
+        required: true
       }
     });
 
@@ -186,10 +203,10 @@ router.get('/top-category', auth, authorizeRole('admin'), async (req, res) => {
       .map(([category, total]) => ({ category, total }))
       .sort((a, b) => b.total - a.total);
 
-    res.json(sorted);
+    return res.json(sorted);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Internal server error', error });
+    console.error('🔥 Error /top-category:', error);
+    return res.status(500).json({ message: 'Internal server error', error });
   }
 });
 
