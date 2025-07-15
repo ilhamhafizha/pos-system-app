@@ -1,13 +1,14 @@
 import { useNavigate, useLocation } from "react-router-dom";
 
-const Sidebar = () => {
+const SidebarAdmin = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
   const menus = [
-    { name: "Dashboard", path: "/cashier/dashboard" },
-    { name: "Sales Report", path: "/cashier/sales" },
-    { name: "Settings", path: "/cashier/setting" },
+    { name: "Dashboard", path: "/admin/dashboard" },
+    { name: "List Menu", path: "/admin/list" },
+    { name: "Sales Report", path: "/admin/sales" },
+    { name: "Settings", path: "/admin/setting" },
   ];
 
   return (
@@ -31,4 +32,4 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar;
+export default SidebarAdmin;

@@ -2,40 +2,126 @@ const express = require('express');
 const router = express.Router();
 const { TransactionGroup, TransactionItem, Catalog } = require('../models');
 const { Op, fn, col } = require('sequelize');
-const { auth } = require('../middlewares/auth');
+const { auth, } = require('../middlewares/auth');
 
 // Dashboard Utama
+// router.get('/', auth('admin'), async (req, res) => {
+//   try {
+//     console.log('📊 GET /admin/dashboard');
+
+//     // Hitung total order unik berdasarkan order_number
+//     const orders = await TransactionGroup.findAll({
+//       attributes: ['order_number', 'total'],
+//       raw: true
+//     });
+
+//     const uniqueOrderMap = {};
+//     orders.forEach(order => {
+//       uniqueOrderMap[order.order_number] = order.total;
+//     });
+
+//     const totalOrders = Object.keys(uniqueOrderMap).length;
+//     const totalOmzet = Object.values(uniqueOrderMap).reduce((sum, val) => sum + val, 0);
+
+//     // Ambil semua item, lalu buang item duplikat berdasarkan transaction_group_id + catalog_id
+//     const allItems = await TransactionItem.findAll({
+//       include: {
+//         model: Catalog,
+//         attributes: ['category']
+//       },
+//       raw: true
+//     });
+
+//     const uniqueItemMap = {};
+//     allItems.forEach(item => {
+//       const key = `${item.transaction_group_id}_${item.catalog_id}`;
+//       uniqueItemMap[key] = item;
+//     });
+
+//     const dataCategory = {
+//       foods: 0,
+//       beverages: 0,
+//       deserts: 0
+//     };
+
+//     let allMenuOrders = 0;
+
+//     Object.values(uniqueItemMap).forEach(item => {
+//       const category = item['Catalog.category'];
+
+//       if (category === 'foods') {
+//         dataCategory.foods += item.quantity;
+//       } else if (category === 'beverages') {
+//         dataCategory.beverages += item.quantity;
+//       } else if (category === 'dessert' || category === 'deserts') {
+//         dataCategory.deserts += item.quantity;
+//       }
+
+//       allMenuOrders += item.quantity;
+//     });
+
+//     return res.json({
+//       message: 'Admin dashboard accessed successfully',
+//       success: true,
+//       data: {
+//         totalOrders,
+//         totalOmzet,
+//         allMenuOrders,
+//         ...dataCategory
+//       }
+//     });
+//   } catch (error) {
+//     console.error('🔥 Error /dashboard:', error);
+//     return res.status(500).json({ message: 'Internal server error', error });
+//   }
+// });
+
 router.get('/', auth('admin'), async (req, res) => {
   try {
     console.log('📊 GET /admin/dashboard');
 
-    // Total Orders
-    const totalOrders = await TransactionGroup.count();
-    console.log('Total Orders:', totalOrders);
+    // Hitung total order unik berdasarkan order_number
+    const orders = await TransactionGroup.findAll({
+      attributes: ['order_number', 'total'],
+      raw: true
+    });
 
-    // Total Omzet
-    const orders = await TransactionGroup.findAll();
-    const totalOmzet = orders.reduce((sum, order) => sum + order.total, 0);
-    console.log('Total Omzet:', totalOmzet);
+    const uniqueOrderMap = {};
+    orders.forEach(order => {
+      uniqueOrderMap[order.order_number] = order.total;
+    });
 
-    // Semua item menu yang terjual
+    const totalOrders = Object.keys(uniqueOrderMap).length;
+    const totalOmzetRaw = Object.values(uniqueOrderMap).reduce((sum, val) => sum + val, 0);
+
+    // ✅ Hitung omzet tanpa pajak (anggap total sudah termasuk 10% PPN)
+    const totalOmzet = Math.round(totalOmzetRaw / 1.1); // dibulatkan ke atas/bawah
+
+    // Ambil semua item, lalu buang item duplikat berdasarkan transaction_group_id + catalog_id
     const allItems = await TransactionItem.findAll({
       include: {
         model: Catalog,
         attributes: ['category']
-      }
+      },
+      raw: true
+    });
+
+    const uniqueItemMap = {};
+    allItems.forEach(item => {
+      const key = `${item.transaction_group_id}_${item.catalog_id}`;
+      uniqueItemMap[key] = item;
     });
 
     const dataCategory = {
       foods: 0,
       beverages: 0,
-      deserts: 0,
+      deserts: 0
     };
 
     let allMenuOrders = 0;
 
-    allItems.forEach(item => {
-      const category = item.Catalog.category;
+    Object.values(uniqueItemMap).forEach(item => {
+      const category = item['Catalog.category'];
 
       if (category === 'foods') {
         dataCategory.foods += item.quantity;
@@ -64,6 +150,8 @@ router.get('/', auth('admin'), async (req, res) => {
   }
 });
 
+
+// Chart per hari: jumlah item berdasarkan kategori
 // Chart per hari: jumlah item berdasarkan kategori
 router.get('/omzet', auth('admin'), async (req, res) => {
   try {
@@ -73,6 +161,7 @@ router.get('/omzet', auth('admin'), async (req, res) => {
       include: [
         {
           model: TransactionGroup,
+          as: 'TransactionGroup', // alias harus sesuai
           attributes: ['createdAt'],
           required: true
         },
@@ -112,10 +201,15 @@ router.get('/omzet', auth('admin'), async (req, res) => {
 
     const result = Object.values(chartMap);
 
+    // Hitung total keseluruhan item dari semua kategori
+    const totalItemsSold = result.reduce((sum, row) =>
+      sum + row.foods + row.beverages + row.deserts, 0);
+
     return res.json({
       message: 'Admin omzet accessed successfully',
       success: true,
-      data: result
+      data: result,
+      totalItemsSold // <- tambahan ini
     });
 
   } catch (error) {
@@ -123,32 +217,77 @@ router.get('/omzet', auth('admin'), async (req, res) => {
     return res.status(500).json({ message: 'Internal server error', error });
   }
 });
+// Chart per hari: total omzet per tanggal
+// Chart omzet per hari berdasarkan TransactionGroup (bukan dari item)
 
-// Chart per hari: omzet total per tanggal
 router.get('/chart', auth('admin'), async (req, res) => {
   try {
     console.log('📊 GET /admin/dashboard/chart');
 
+    // Ambil semua item & group terkait
     const items = await TransactionItem.findAll({
-      include: {
-        model: TransactionGroup,
-        attributes: [],
-        required: true
-      },
-      attributes: [
-        [fn('DATE', col('TransactionGroup.createdAt')), 'date'],
-        [fn('SUM', col('subtotal')), 'total']
+      include: [
+        {
+          model: TransactionGroup,
+          as: 'TransactionGroup',
+          attributes: ['createdAt', 'order_number']
+        },
+        {
+          model: Catalog,
+          attributes: ['category']
+        }
       ],
-      group: [fn('DATE', col('TransactionGroup.createdAt'))],
       raw: true
     });
 
-    return res.json(items);
+    // Hapus duplikat berdasarkan transaction_group_id + catalog_id
+    const uniqueItemMap = {};
+    items.forEach(item => {
+      const key = `${item.transaction_group_id}_${item.catalog_id}`;
+      uniqueItemMap[key] = item;
+    });
+
+    const chartMap = {};
+
+    Object.values(uniqueItemMap).forEach(item => {
+      const rawDate = item['TransactionGroup.createdAt'];
+      const date = rawDate?.toISOString().split('T')[0];
+      const category = item['Catalog.category']?.toLowerCase();
+      const subtotal = Number(item.subtotal || 0);
+
+      if (!date || !category) return;
+
+      if (!chartMap[date]) {
+        chartMap[date] = {
+          date,
+          foods: 0,
+          beverages: 0,
+          desserts: 0,
+          total: 0
+        };
+      }
+
+      if (category === 'foods') chartMap[date].foods += subtotal;
+      else if (category === 'beverages') chartMap[date].beverages += subtotal;
+      else if (category === 'dessert' || category === 'desserts') chartMap[date].desserts += subtotal;
+
+      chartMap[date].total += subtotal;
+    });
+
+    const result = Object.values(chartMap);
+
+    return res.json({
+      message: 'Omzet per tanggal fetched successfully',
+      success: true,
+      data: result
+    });
+
   } catch (error) {
     console.error('🔥 Error /chart:', error);
-    return res.status(500).json({ message: 'Internal server error', error });
+    res.status(500).json({ message: 'Internal server error', error });
   }
 });
+
 
 // Summary hari ini
 router.get('/summary', auth('admin'), async (req, res) => {

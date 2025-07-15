@@ -69,7 +69,10 @@ const SalesReport = () => {
             <div className="bg-white rounded shadow p-4">
               <h3 className="text-gray-500 text-sm">Total Omzet</h3>
               <p className="text-xl font-semibold text-green-600">
-                Rp {summary.total_omzet.toLocaleString()}
+                Rp{" "}
+                {(summary.total_omzet / 1.1).toLocaleString(undefined, {
+                  minimumFractionDigits: 0,
+                })}
               </p>
             </div>
             <div className="bg-white rounded shadow p-4">

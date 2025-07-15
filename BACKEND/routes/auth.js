@@ -43,7 +43,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/register', async (req, res) => {
   try {
-    const { name, username, email, password, confirmPassword } = req.body;
+    const { name, username, email, password, confirmPassword, active } = req.body; // ✅ perbaikan
 
     // Validasi input
     if (!username || !email || !password || !confirmPassword) {
@@ -62,13 +62,14 @@ router.post('/register', async (req, res) => {
 
     // Buat user baru sebagai cashier
     const newUser = await User.create({
-      name,         // ⬅️ ini yang baru
+      name,
       username,
       email,
       password,
-      role: 'cashier'
+      role: 'cashier',
+      active: true,       // kirim dari FE atau hardcode
+      status: 'active'
     });
-
 
     return res.status(201).json({
       message: 'Registration successful. You can now log in.',
@@ -77,15 +78,17 @@ router.post('/register', async (req, res) => {
         username: newUser.username,
         name: newUser.name,
         email: newUser.email,
-        role: newUser.role
+        role: newUser.role,
+        status: newUser.status
       }
     });
 
   } catch (error) {
-    console.error(error);
+    console.error("❌ REGISTER ERROR:", error);
     res.status(500).json({ message: 'Internal server error.' });
   }
 });
+
 
 router.post('/reset-password/email', async (req, res) => {
   try {

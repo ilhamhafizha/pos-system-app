@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
     username: DataTypes.STRING,
     password: DataTypes.STRING,
     status: DataTypes.STRING,
-    language: DataTypes.STRING
+    language: DataTypes.STRING,
   }, {
     sequelize,
     modelName: 'User',
@@ -36,6 +36,13 @@ module.exports = (sequelize, DataTypes) => {
   User.beforeCreate(async (user, options) => {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(user.password, salt);
+    // fallback default
+    if (user.active === undefined || user.active === null) {
+      user.active = true;
+    }
+
+    // status ikut active
+    user.status = user.active ? 'active' : 'inactive';
   });
 
   // Hash otomatis saat password diubah

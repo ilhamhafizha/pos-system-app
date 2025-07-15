@@ -12,6 +12,7 @@ const Register = () => {
     email: "",
     password: "",
     confirmPassword: "",
+    active: true,
   });
 
   const handleChange = (e) => {

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
-import Header from "../components/Header";
 import NotePopup from "../components/NotePopup";
 
 const CashierDashboard = () => {

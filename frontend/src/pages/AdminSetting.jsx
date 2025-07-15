@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
 
-const SettingPage = () => {
+const AdminSetting = () => {
   const stored = JSON.parse(localStorage.getItem("user"));
   const token = stored?.token;
   const [user, setUser] = useState(stored?.user || {});
@@ -237,4 +237,4 @@ const SettingPage = () => {
   );
 };
 
-export default SettingPage;
+export default AdminSetting;

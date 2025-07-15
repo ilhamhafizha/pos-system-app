@@ -10,8 +10,11 @@ import CashierSales from "../pages/CashierSales";
 
 import SettingPage from "../pages/SettingPage"; // pastikan file ini sudah ada
 import CashierLayout from "../layouts/CashierLayout"; // ⬅️ layout baru
-
-const AdminDashboard = () => <div className="p-10 text-xl">Admin Dashboard</div>;
+import AdminLayout from "../layouts/AdminLayout"; // ⬅️ layout baru
+import AdminDashboard from "../pages/AdminDashboard";
+import AdminList from "../pages/AdminList";
+import AdminSales from "../pages/AdminSales";
+import AdminSetting from "../pages/AdminSetting";
 
 const Router = () => {
   return (
@@ -21,8 +24,16 @@ const Router = () => {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
         <Route path="/cashier/history" element={<OrderHistory />} />
+
+        {/* ⬇️ Semua halaman kasir berada di dalam layout Admin */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="list" element={<AdminList />} />
+          <Route path="sales" element={<AdminSales />} />
+          <Route path="setting" element={<AdminSetting />} />
+        </Route>
 
         {/* ⬇️ Semua halaman kasir berada di dalam layout CashierLayout */}
         <Route element={<CashierLayout />}>
