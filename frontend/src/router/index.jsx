@@ -15,6 +15,7 @@ import AdminDashboard from "../pages/AdminDashboard";
 import AdminList from "../pages/AdminList";
 import AdminSales from "../pages/AdminSales";
 import AdminSetting from "../pages/AdminSetting";
+import AdminReceipt from "../pages/AdminReceipt";
 
 const Router = () => {
   return (
@@ -33,6 +34,7 @@ const Router = () => {
           <Route path="list" element={<AdminList />} />
           <Route path="sales" element={<AdminSales />} />
           <Route path="setting" element={<AdminSetting />} />
+          <Route path="/admin/receipt" element={<AdminReceipt />} />
         </Route>
 
         {/* ⬇️ Semua halaman kasir berada di dalam layout CashierLayout */}

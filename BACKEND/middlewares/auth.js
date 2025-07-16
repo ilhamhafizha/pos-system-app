@@ -2,7 +2,9 @@ const jwt = require('jsonwebtoken');
 
 function auth(role) {
   return function (req, res, next) {
-    const token = req.headers.authorization?.split(' ')[1];
+    // Ambil token dari header atau query
+    const token =
+      req.headers.authorization?.split(' ')[1] || req.query.token;
     if (!token) return res.status(401).json({ message: 'Unauthorized' });
 
     try {

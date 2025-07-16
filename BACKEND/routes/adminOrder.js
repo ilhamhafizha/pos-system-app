@@ -1,9 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { TransactionGroup, TransactionItem, Catalog } = require('../models');
-const { auth, authorizeRole } = require('../middlewares/auth');
+const { auth } = require('../middlewares/auth');
 
-router.get('/orders', auth, authorizeRole('admin'), async (req, res) => {
+router.get('/orders', auth('admin'), async (req, res) => {
   try {
     const orders = await TransactionGroup.findAll({
       include: [
@@ -27,7 +27,7 @@ router.get('/orders', auth, authorizeRole('admin'), async (req, res) => {
   }
 });
 
-router.get('/orders/:id', auth, authorizeRole('admin'), async (req, res) => {
+router.get('/orders/:id', auth('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -116,7 +116,7 @@ router.get('/orders/:id', auth, authorizeRole('admin'), async (req, res) => {
 //   }
 // });
 
-router.get('/orders/detail-transaction/:id', auth, authorizeRole('admin'), async (req, res) => {
+router.get('/orders/detail-transaction/:id', auth('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 

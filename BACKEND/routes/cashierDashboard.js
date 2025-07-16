@@ -45,6 +45,7 @@ router.get(
   dashboardCashier.getOrderHistory
 );
 
+
 router.get('/dashboard/orders/history', auth('cashier'), dashboardCashier.getOrderHistory);
 
 module.exports = router;

@@ -99,8 +99,6 @@ router.put('/password', auth('cashier'), async (req, res) => {
   }
 });
 
-
-
 /* =======================================================
 ✅ PATCH /cashier/settings/avatar → Upload avatar
 ========================================================= */

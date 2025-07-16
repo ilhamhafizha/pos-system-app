@@ -224,7 +224,6 @@ router.get('/chart', auth('admin'), async (req, res) => {
   try {
     console.log('📊 GET /admin/dashboard/chart');
 
-    // Ambil semua item & group terkait
     const items = await TransactionItem.findAll({
       include: [
         {
@@ -240,7 +239,6 @@ router.get('/chart', auth('admin'), async (req, res) => {
       raw: true
     });
 
-    // Hapus duplikat berdasarkan transaction_group_id + catalog_id
     const uniqueItemMap = {};
     items.forEach(item => {
       const key = `${item.transaction_group_id}_${item.catalog_id}`;
@@ -251,7 +249,9 @@ router.get('/chart', auth('admin'), async (req, res) => {
 
     Object.values(uniqueItemMap).forEach(item => {
       const rawDate = item['TransactionGroup.createdAt'];
-      const date = rawDate?.toISOString().split('T')[0];
+      const dateObj = new Date(rawDate.getTime() + 7 * 60 * 60 * 1000); // WIB
+      const date = dateObj.toISOString().split('T')[0]; // hasilnya: 2025-07-15
+
       const category = item['Catalog.category']?.toLowerCase();
       const subtotal = Number(item.subtotal || 0);
 
@@ -287,7 +287,6 @@ router.get('/chart', auth('admin'), async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error });
   }
 });
-
 
 // Summary hari ini
 router.get('/summary', auth('admin'), async (req, res) => {
@@ -348,5 +347,46 @@ router.get('/top-category', auth('admin'), async (req, res) => {
     return res.status(500).json({ message: 'Internal server error', error });
   }
 });
+
+router.get('/category/:category', auth('admin'), async (req, res) => {
+  try {
+    const { category } = req.params;
+
+    const items = await TransactionItem.findAll({
+      include: [
+        {
+          model: Catalog,
+          where: { category },
+          attributes: ['name', 'category']
+        }
+      ],
+      attributes: ['catalog_id'],
+      raw: true
+    });
+
+    // Hitung total menu yang terjual per nama menu
+    const result = {};
+    for (const item of items) {
+      const name = item['Catalog.name'];
+      if (!result[name]) {
+        result[name] = 1;
+      } else {
+        result[name]++;
+      }
+    }
+
+    // Ubah ke array dan urutkan berdasarkan total terjual
+    const formatted = Object.entries(result).map(([name, total_sold]) => ({
+      name,
+      total_sold
+    }));
+
+    res.json({ message: 'Kategori detail fetched', data: formatted });
+  } catch (error) {
+    console.error('Error fetch kategori:', error);
+    res.status(500).json({ message: 'Internal server error', error });
+  }
+});
+
 
 module.exports = router;

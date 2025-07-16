@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const { Catalog } = require('../models');
-const { auth, authorizeRole } = require('../middlewares/auth');
+const { auth } = require('../middlewares/auth');
 
 // GET /admin/catalogs
-router.get('/', auth, authorizeRole('admin'), async (req, res) => {
+router.get('/', auth('admin'), async (req, res) => {
   try {
     const catalogs = await Catalog.findAll({
       where: {
@@ -21,7 +21,7 @@ router.get('/', auth, authorizeRole('admin'), async (req, res) => {
 });
 
 // GET /admin/catalogs/:id → ambil detail satu catalog berdasarkan ID
-router.get('/:id', auth, authorizeRole('admin'), async (req, res) => {
+router.get('/:id', auth('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -39,7 +39,7 @@ router.get('/:id', auth, authorizeRole('admin'), async (req, res) => {
 });
 
 // POST /admin/catalogs → Tambah menu baru
-router.post('/', auth, authorizeRole('admin'), async (req, res) => {
+router.post('/', auth('admin'), async (req, res) => {
   try {
     const { image, name, category, price, description, is_deleted } = req.body;
 
@@ -60,7 +60,7 @@ router.post('/', auth, authorizeRole('admin'), async (req, res) => {
 });
 
 // PUT /admin/catalogs/:id → Edit data catalog
-router.put('/:id', auth, authorizeRole('admin'), async (req, res) => {
+router.put('/:id', auth('admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { image, name, category, price, description, is_deleted } = req.body;
@@ -87,7 +87,7 @@ router.put('/:id', auth, authorizeRole('admin'), async (req, res) => {
 });
 
 // DELETE /admin/catalogs/:id → Soft delete
-router.delete('/:id', auth, authorizeRole('admin'), async (req, res) => {
+router.delete('/:id', auth('admin'), async (req, res) => {
   try {
     const { id } = req.params;
 

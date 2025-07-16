@@ -17,15 +17,13 @@ const AdminSetting = () => {
   useEffect(() => {
     if (user?.avatar) {
       setPreview(`http://localhost:3000/${user.avatar}`);
-    } else {
-      setPreview("/default-avatar.png");
     }
   }, [user]);
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/cashier/settings", {
+        const res = await axios.get("http://localhost:3000/admin/settings", {
           headers: { Authorization: `Bearer ${token}` },
         });
         setUser(res.data);
@@ -35,9 +33,7 @@ const AdminSetting = () => {
       }
     };
 
-    if (!user?.avatar) {
-      fetchProfile();
-    }
+    fetchProfile();
   }, []);
 
   const handleChange = (e) => {
@@ -46,7 +42,7 @@ const AdminSetting = () => {
 
   const handleSaveProfile = async () => {
     try {
-      const res = await axios.put("http://localhost:3000/cashier/settings", formData, {
+      const res = await axios.put("http://localhost:3000/admin/settings", formData, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const updatedUser = { ...user, ...res.data.user };
@@ -61,7 +57,7 @@ const AdminSetting = () => {
   const handlePasswordChange = async () => {
     try {
       await axios.put(
-        "http://localhost:3000/cashier/settings/password",
+        "http://localhost:3000/admin/settings/password",
         { currentPassword, newPassword },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -80,13 +76,12 @@ const AdminSetting = () => {
       const uploadData = new FormData();
       uploadData.append("avatar", file);
       try {
-        const res = await axios.patch("http://localhost:3000/cashier/settings/avatar", uploadData, {
+        const res = await axios.patch("http://localhost:3000/admin/settings/avatar", uploadData, {
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "multipart/form-data",
           },
         });
-
         const updatedUser = { ...user, avatar: res.data.avatar };
         localStorage.setItem("user", JSON.stringify({ token, user: updatedUser }));
         setUser(updatedUser);
@@ -112,7 +107,7 @@ const AdminSetting = () => {
     if (result.isConfirmed) {
       try {
         await axios.patch(
-          "http://localhost:3000/cashier/settings/avatar/delete",
+          "http://localhost:3000/admin/settings/avatar/delete",
           {},
           {
             headers: { Authorization: `Bearer ${token}` },
@@ -123,7 +118,6 @@ const AdminSetting = () => {
         const updatedUser = { ...user, avatar: null };
         localStorage.setItem("user", JSON.stringify({ token, user: updatedUser }));
         setUser(updatedUser);
-
         Swal.fire("Berhasil", "Foto berhasil dihapus!", "success");
       } catch (err) {
         Swal.fire("Gagal", "Gagal menghapus foto.", "error");
@@ -136,6 +130,7 @@ const AdminSetting = () => {
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-700">Pengaturan Profil</h2>
         <button
+          type="button"
           onClick={handleSaveProfile}
           className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700"
         >
@@ -160,7 +155,11 @@ const AdminSetting = () => {
             onChange={handleFileChange}
             className="hidden"
           />
-          <button onClick={handleDeletePicture} className="text-sm text-red-500 hover:underline">
+          <button
+            type="button"
+            onClick={handleDeletePicture}
+            className="text-sm text-red-500 hover:underline"
+          >
             Delete Picture
           </button>
         </div>
@@ -227,6 +226,7 @@ const AdminSetting = () => {
           </div>
         </div>
         <button
+          type="button"
           onClick={handlePasswordChange}
           className="bg-blue-600 text-white px-5 py-2 rounded hover:bg-blue-700"
         >

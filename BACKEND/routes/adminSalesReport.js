@@ -1,13 +1,13 @@
 const express = require('express');
 const router = express.Router();
 const { Op } = require('sequelize');
-const { TransactionGroup, TransactionItem, Catalog } = require('../models');
+const { TransactionGroup, TransactionItem, Catalog, User } = require('../models');
 const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
-const { auth, authorizeRole } = require('../middlewares/auth');
+const { auth } = require('../middlewares/auth');
 
 // GET /admin/sales-report
-router.get('/sales-report', auth, authorizeRole('admin'), async (req, res) => {
+router.get('/sales-report', auth('admin'), async (req, res) => {
   try {
     const { start, finish, category, orderType, search, export: exportType } = req.query;
 
@@ -37,6 +37,7 @@ router.get('/sales-report', auth, authorizeRole('admin'), async (req, res) => {
 
     const includeItems = {
       model: TransactionItem,
+      as: 'TransactionItems',
       include: [
         {
           model: Catalog,
@@ -105,43 +106,50 @@ router.get('/sales-report', auth, authorizeRole('admin'), async (req, res) => {
 
     // Export PDF
     if (exportType === 'pdf') {
-      const doc = new PDFDocument({ margin: 30, size: 'A4' });
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename="sales-report.pdf"');
+      res.setHeader('Content-Disposition', 'attachment; filename=sales-report.pdf');
+      res.flushHeaders();
+
+      const doc = new PDFDocument({ margin: 40 });
       doc.pipe(res);
 
       doc.fontSize(18).text('Sales Report', { align: 'center' });
       doc.moveDown();
 
-      transactions.forEach((tx, index) => {
+      transactions.forEach((tx) => {
         doc
           .fontSize(12)
-          .text(`Order No: ${tx.order_number}`)
-          .text(`Date: ${new Date(tx.createdAt).toLocaleString('id-ID')}`)
-          .text(`Customer: ${tx.customer_name}`)
-          .text(`Type: ${tx.transaction_type}`)
-          .text(`Table: ${tx.table || '-'}`)
-          .text(`Subtotal: Rp${tx.subtotal_group}`)
-          .text(`Tax: Rp${tx.tax}`)
-          .text(`Total: Rp${tx.total}`)
-          .text(`Cash: Rp${tx.cash}`)
-          .text(`Cashback: Rp${tx.cashback}`)
+          .text(`Order No : ${tx.order_number}`)
+          .text(`Customer : ${tx.customer_name}`)
+          .text(`Date     : ${new Date(tx.createdAt).toLocaleString('id-ID')}`)
+          .text(`Type     : ${tx.transaction_type}`)
+          .text(`Table    : ${tx.table}`)
+          .text(`Subtotal : Rp${tx.subtotal_group}`)
+          .text(`Tax      : Rp${tx.tax}`)
+          .text(`Total    : Rp${tx.total}`)
+          .text(`Cash     : Rp${tx.cash}`)
+          .text(`Cashback : Rp${tx.cashback}`)
           .moveDown(0.5)
-          .text('Items:', { underline: true });
+          .text(`Items:`, { underline: true });
 
-        tx.TransactionItems.forEach(item => {
-          doc
-            .text(`- ${item.Catalog.name} x ${item.quantity} @Rp${item.Catalog.price} = Rp${item.subtotal} (${item.note})`);
+        tx.TransactionItems.forEach((item, i) => {
+          doc.text(
+            `  ${i + 1}. ${item.Catalog.name} (${item.Catalog.category})\n     Qty: ${item.quantity} | Price: Rp${item.Catalog.price} | Subtotal: Rp${item.subtotal}`,
+            { lineGap: 2 }
+          );
+          if (item.note) {
+            doc.text(`     Note: ${item.note}`, { lineGap: 2 });
+          }
         });
 
-        doc.moveDown();
-        if (index !== transactions.length - 1) doc.moveTo(doc.x, doc.y).lineTo(550, doc.y).stroke();
+        doc.moveDown().moveTo(40, doc.y).lineTo(550, doc.y).stroke();
         doc.moveDown();
       });
 
       doc.end();
       return;
     }
+
 
     // Default: kirim data JSON
     res.json({
@@ -153,6 +161,45 @@ router.get('/sales-report', auth, authorizeRole('admin'), async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
+router.get('/sales-report/:id/receipt', auth('admin'), async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const transaction = await TransactionGroup.findByPk(id, {
+      include: [
+        {
+          model: TransactionItem,
+          as: 'TransactionItems',
+          include: [
+            {
+              model: Catalog,
+              attributes: ['name', 'category', 'price']
+            }
+          ]
+        },
+        {
+          model: User,
+          as: 'user',
+          attributes: ['username', 'email']
+        }
+      ]
+    });
+
+    if (!transaction) {
+      return res.status(404).json({ message: 'Transaksi tidak ditemukan' });
+    }
+
+    res.json({
+      message: 'Detail transaksi ditemukan',
+      success: true,
+      data: transaction
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Terjadi kesalahan server', error: err.message });
   }
 });
 

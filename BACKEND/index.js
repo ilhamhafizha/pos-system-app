@@ -38,6 +38,8 @@ const cashierSettingsRoute = require('./routes/cashierSettings');
 app.use('/cashier/settings', cashierSettingsRoute);
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/exports", express.static(path.join(__dirname, "exports")));
+
 
 app.get('/', (req, res) => {
   res.send('API is running...');
