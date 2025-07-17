@@ -1,13 +1,25 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const { login } = useAuth();
+  const { user, login } = useAuth();
   const navigate = useNavigate();
   const [form, setForm] = useState({ email: "", password: "" });
+
+  // 🔒 Jika user sudah login, langsung redirect ke dashboard
+  useEffect(() => {
+    if (user) {
+      const role = user.user?.role;
+      if (role === "admin") {
+        navigate("/admin/dashboard");
+      } else if (role === "cashier") {
+        navigate("/cashier/dashboard");
+      }
+    }
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });

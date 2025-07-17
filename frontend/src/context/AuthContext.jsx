@@ -1,6 +1,7 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
+const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 menit
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -12,6 +13,7 @@ export const AuthProvider = ({ children }) => {
     const payload = {
       token: data.token,
       user: data.user,
+      loginTime: Date.now(), // catat waktu login
     };
     setUser(payload);
     localStorage.setItem("user", JSON.stringify(payload));
@@ -20,11 +22,53 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem("user");
-    // gunakan redirect manual
     window.location.href = "/login";
   };
 
-  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
+  // ⏱️ Auto logout jika session lewat dari batas waktu
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const saved = localStorage.getItem("user");
+      if (saved) {
+        const session = JSON.parse(saved);
+        const now = Date.now();
+        const diff = now - session.loginTime;
+
+        if (diff > SESSION_TIMEOUT) {
+          alert("Session expired. Please login again.");
+          logout();
+        }
+      }
+    }, 10000); // cek setiap 10 detik
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🔄 Reset timer jika user aktif (opsional tapi disarankan)
+  useEffect(() => {
+    const resetTimer = () => {
+      const saved = localStorage.getItem("user");
+      if (saved) {
+        const session = JSON.parse(saved);
+        session.loginTime = Date.now();
+        localStorage.setItem("user", JSON.stringify(session));
+      }
+    };
+
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+
+    return () => {
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+    };
+  }, []);
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);
