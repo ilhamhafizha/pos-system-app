@@ -4,7 +4,7 @@ import { FiExternalLink } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
 const OrderHistory = () => {
-  const [sales, setSales] = useState([]);
+  const [orders, setorders] = useState([]);
   const [filters, setFilters] = useState({
     customer_name: "",
     transaction_type: "",
@@ -15,16 +15,35 @@ const OrderHistory = () => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
+
   useEffect(() => {
-    fetchSales();
+    fetchorders();
   }, []);
+
+
+  const fetchorders = async () => {
+    try {
+      setLoading(true);
+      const token = JSON.parse(localStorage.getItem("user"))?.token;
+      const query = new URLSearchParams(filters).toString();
+      const res = await axios.get(`http://localhost:3000/cashier/orders-report?${query}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setorders(res.data.data || []);
+    } catch (err) {
+      console.error("Gagal fetch orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
 
   const handleInputChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
   };
 
   const handleSearch = () => {
-    fetchSales();
+    fetchorders();
   };
 
   const handleReset = () => {
@@ -35,14 +54,14 @@ const OrderHistory = () => {
       start: "",
       finish: "",
     });
-    fetchSales();
+    fetchorders();
   };
 
   const handleExport = async (type) => {
     try {
       const token = JSON.parse(localStorage.getItem("user"))?.token;
       const query = new URLSearchParams({ ...filters, export: type }).toString();
-      const res = await axios.get(`http://localhost:3000/cashier/sales-report?${query}`, {
+      const res = await axios.get(`http://localhost:3000/cashier/orders-report?${query}`, {
         headers: { Authorization: `Bearer ${token}` },
         responseType: "blob",
       });
@@ -51,7 +70,7 @@ const OrderHistory = () => {
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `cashier-sales-report.${type === "excel" ? "xlsx" : "pdf"}`);
+      link.setAttribute("download", `cashier-orders-report.${type === "excel" ? "xlsx" : "pdf"}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -61,60 +80,19 @@ const OrderHistory = () => {
     }
   };
 
-  const fetchSales = async () => {
+  const handleDetailClick = async (id) => {
     try {
-      setLoading(true);
       const token = JSON.parse(localStorage.getItem("user"))?.token;
-      const query = new URLSearchParams(filters).toString();
-      const res = await axios.get(`http://localhost:3000/cashier/sales-report?${query}`, {
+      const res = await axios.get(`http://localhost:3000/cashier/dashboard/orders/${id}/receipt`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-
-      // ⬇️ Tambahkan console.log di sini
-      console.log("Sales response:", res.data.data);
-
-      setSales(res.data.data || []);
+      const receipt = res.data?.data;
+      if (receipt) {
+        navigate("/cashier/receipt", { state: { receipt } });
+      }
     } catch (err) {
-      console.error("Gagal fetch sales:", err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDetailClick = async (orderNumber) => {
-    try {
-      const token = JSON.parse(localStorage.getItem("user"))?.token;
-      const res = await axios.get(`http://localhost:3000/cashier/sales-report/${orderNumber}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      const data = res.data.data;
-
-      // Format data supaya sesuai struktur ReceiptPage
-      const formattedReceipt = {
-        order_number: data.order_number,
-        createdAt: data.createdAt,
-        customer_name: data.customer_name,
-        table: data.table,
-        transaction_type: data.transaction_type,
-        subtotal: data.subtotal_group,
-        tax: data.tax,
-        total: data.total,
-        cash: data.cash,
-        cashback: data.cashback,
-        items: data.TransactionItems.map((item) => ({
-          menu: item.Catalog.name,
-          quantity: item.quantity,
-          subtotal: item.subtotal,
-        })),
-      };
-
-      navigate(`/cashier/receipt/${orderNumber}`, {
-        state: { receipt: formattedReceipt },
-      });
-    } catch (error) {
-      console.error("Gagal ambil struk:", error);
-      alert("Gagal mengambil detail transaksi!");
+      console.error("Gagal ambil struk:", err);
+      alert("Gagal menampilkan detail transaksi.");
     }
   };
 
@@ -257,26 +235,23 @@ const OrderHistory = () => {
                   Memuat data...
                 </td>
               </tr>
-            ) : sales.length === 0 ? (
+            ) : orders.length === 0 ? (
               <tr>
                 <td colSpan="6" className="p-4 text-center text-gray-400 italic">
                   Tidak ada transaksi ditemukan.
                 </td>
               </tr>
             ) : (
-              sales.map((tx, idx) => (
+              orders.map((order, idx) => (
                 <tr key={idx} className="border-t hover:bg-gray-50">
                   <td className="p-3">{idx + 1}</td>
-                  <td className="p-3 font-medium">{tx.order_number}</td>
-                  <td className="p-3">{formatDate(tx.createdAt)}</td>
-                  <td className="p-3 capitalize">{tx.transaction_type.replace("_", " ")}</td>
-                  <td className="p-3">{tx.customer_name}</td>
+                  <td className="p-3 font-medium">{order.order_number}</td>
+                  <td className="p-3">{formatDate(order.createdAt)}</td>
+                  <td className="p-3 capitalize">{order.transaction_type.replace("_", " ")}</td>
+                  <td className="p-3">{order.customer_name}</td>
                   <td className="p-3 text-center">
                     <button
-                      onClick={() => {
-                        console.log("Klik detail, order_number:", tx.order_number);
-                        handleDetailClick(tx.order_number); // Ganti sesuai key yang benar
-                      }}
+                      onClick={() => handleDetailClick(order.id)}
                       className="text-blue-600 hover:text-blue-800"
                       title="Lihat Struk"
                     >

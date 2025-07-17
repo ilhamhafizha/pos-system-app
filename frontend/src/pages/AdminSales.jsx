@@ -88,9 +88,22 @@ const AdminSales = () => {
     }
   };
 
-  const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleString("id-ID");
+  const formatDate = (str) => {
+    if (!str) return "-";
+    const date = new Date(str);
+
+    // Tambah offset +7 jam untuk WIB
+    const offsetInMs = 7 * 60 * 60 * 1000;
+    const wibDate = new Date(date.getTime() + offsetInMs);
+
+    const day = wibDate.getDate().toString().padStart(2, "0");
+    const month = wibDate.toLocaleString("id-ID", { month: "long" });
+    const year = wibDate.getFullYear();
+    const hours = wibDate.getHours().toString().padStart(2, "0");
+    const minutes = wibDate.getMinutes().toString().padStart(2, "0");
+    const seconds = wibDate.getSeconds().toString().padStart(2, "0");
+
+    return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
   };
 
   return (

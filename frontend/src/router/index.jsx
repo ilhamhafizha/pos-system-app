@@ -26,8 +26,6 @@ const Router = () => {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
 
-        <Route path="/cashier/history" element={<OrderHistory />} />
-
         {/* ⬇️ Semua halaman kasir berada di dalam layout Admin */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />
@@ -37,12 +35,13 @@ const Router = () => {
           <Route path="/admin/receipt" element={<AdminReceipt />} />
         </Route>
 
+        <Route path="/cashier/history" element={<OrderHistory />} />
         {/* ⬇️ Semua halaman kasir berada di dalam layout CashierLayout */}
         <Route element={<CashierLayout />}>
           <Route path="/cashier/dashboard" element={<CashierDashboard />} />
           <Route path="/cashier/sales" element={<CashierSales />} />
           <Route path="/cashier/setting" element={<SettingPage />} />
-          <Route path="/cashier/receipt" element={<ReceiptPage />} />
+          <Route path="/cashier/receipt/:orderNumber" element={<ReceiptPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

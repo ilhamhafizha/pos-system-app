@@ -52,7 +52,8 @@ const SummaryCards = ({ data }) => {
         <p className="text-xl font-semibold text-green-600">
           Rp{" "}
           {(data?.totalOmzet ? data.totalOmzet / 1.1 : 0).toLocaleString("id-ID", {
-            minimumFractionDigits: 0,
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
           })}
         </p>
       </div>
