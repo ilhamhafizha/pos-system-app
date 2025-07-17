@@ -13,7 +13,7 @@ const SidebarAdmin = () => {
 
   return (
     <aside className="w-52 min-h-screen bg-white shadow-md p-4">
-      <h2 className="text-xl font-bold text-blue-600 mb-6">POS Kasir</h2>
+      <h2 className="text-xl font-bold text-blue-600 mb-6">POS Admin</h2>
 
       <ul className="space-y-2">
         {menus.map((menu) => (

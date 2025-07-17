@@ -41,6 +41,7 @@ const Router = () => {
           <Route path="/cashier/dashboard" element={<CashierDashboard />} />
           <Route path="/cashier/sales" element={<CashierSales />} />
           <Route path="/cashier/setting" element={<SettingPage />} />
+          <Route path="/cashier/receipt" element={<ReceiptPage />} />
           <Route path="/cashier/receipt/:orderNumber" element={<ReceiptPage />} />
         </Route>
       </Routes>

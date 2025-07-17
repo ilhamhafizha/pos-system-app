@@ -22,7 +22,9 @@ const Login = () => {
         password: form.password,
       });
 
-      login(res.data); // simpan token & user info
+      // Simpan token & data user (termasuk avatar)
+      login(res.data);
+
       Swal.fire("Success", "Login successful", "success");
 
       // Redirect berdasarkan role dari server
@@ -69,20 +71,21 @@ const Login = () => {
         >
           Login
         </button>
-        <p className="mt-4 text-center text-sm text-gray-600">
-          <p className="mt-4 text-center text-sm">
+
+        <div className="mt-4 text-center text-sm text-gray-600">
+          <p>
             Belum punya akun?{" "}
             <a href="/register" className="text-blue-600 hover:underline">
               Register
             </a>
           </p>
-          <p className="mt-2 text-center text-sm">
+          <p className="mt-2">
             Lupa password?{" "}
             <a href="/forgot-password" className="text-blue-600 hover:underline">
               Reset password
             </a>
           </p>
-        </p>
+        </div>
       </form>
     </div>
   );

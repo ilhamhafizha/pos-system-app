@@ -31,9 +31,11 @@ router.post('/login', async (req, res) => {
         id: foundUser.id,
         role: foundUser.role,
         username: foundUser.username,
-        email: foundUser.email
+        email: foundUser.email,
+        avatar: foundUser.avatar || null // ⬅️ tambahkan ini
       }
     });
+
 
   } catch (error) {
     console.error(error);
@@ -79,7 +81,8 @@ router.post('/register', async (req, res) => {
         name: newUser.name,
         email: newUser.email,
         role: newUser.role,
-        status: newUser.status
+        status: newUser.status,
+        avatar: newUser.avatar || null // ⬅️ jika ada
       }
     });
 

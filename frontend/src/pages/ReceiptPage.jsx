@@ -42,6 +42,19 @@ const ReceiptPage = () => {
     return `${datePart} ${timePart}`;
   };
 
+  const formatFullDate = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleString("id-ID", {
+      timeZone: "Asia/Jakarta",
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   return (
     <div className="p-6 max-w-md mx-auto font-sans">
       <h2 className="text-xl font-bold mb-4">Struk Pembayaran</h2>
@@ -104,7 +117,12 @@ const ReceiptPage = () => {
         <>
           <p>Customer: {receipt.customer}</p>
           {receipt.table && <p>Meja: {receipt.table}</p>}
-          <p>Tanggal Order: {formatFullDateTime(receipt.createdAt)}</p>
+          <p>
+            Tanggal Order:{" "}
+            <b>
+              {formatFullDate(receipt.createdAt ?? (receipt.createdAt = new Date().toISOString()))}
+            </b>
+          </p>
 
           <ul className="mt-4 space-y-1 border-t pt-2 text-sm">
             {receipt.items.map((item, idx) => (

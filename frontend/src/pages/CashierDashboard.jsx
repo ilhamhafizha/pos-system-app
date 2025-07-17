@@ -32,7 +32,11 @@ const CashierDashboard = () => {
 
       const data = res.data?.data;
       if (Array.isArray(data)) {
-        setMenus(data);
+        const updatedMenus = data.map((menu) => ({
+          ...menu,
+          image: menu.image ? `http://localhost:3000/uploads/${menu.image}` : "/placeholder.jpg", // fallback kalau tidak ada gambar
+        }));
+        setMenus(updatedMenus);
       } else {
         console.warn("Format data tidak sesuai");
       }
@@ -237,7 +241,12 @@ const CashierDashboard = () => {
                     src={menu.image}
                     alt={menu.name}
                     className="w-full h-40 object-cover rounded"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "/placeholder.jpg"; // gambar default jika gagal load
+                    }}
                   />
+
                   <h3 className="text-lg font-semibold mt-2">{menu.name}</h3>
                   <p className="text-sm text-gray-500 capitalize">{menu.category}</p>
                   <p className="text-sm mt-1 text-gray-600">{menu.description}</p>
@@ -436,7 +445,11 @@ const CashierDashboard = () => {
 
                   {/* ✅ Tombol cetak struk */}
                   <button
-                    onClick={() => navigate("/cashier/receipt", { state: { receipt } })}
+                    onClick={() =>
+                      navigate("/cashier/receipt", {
+                        state: { ...receipt, createdAt: new Date().toISOString() },
+                      })
+                    }
                     className="mt-4 w-full bg-gray-700 text-white py-2 rounded hover:bg-gray-800"
                   >
                     Cetak Struk

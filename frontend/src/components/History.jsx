@@ -138,8 +138,6 @@ const OrderHistory = () => {
 
   return (
     <div className="p-6 max-w-screen-xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6 text-gray-700">Laporan Penjualan (Cashier)</h2>
-
       {/* Filter Section */}
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
