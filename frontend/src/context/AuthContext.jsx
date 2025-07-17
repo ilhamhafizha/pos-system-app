@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 const AuthContext = createContext();
-const SESSION_TIMEOUT = 10 * 60 * 1000; // 10 menit
+const SESSION_TIMEOUT = 60 * 60 * 1000; // 10 menit
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
@@ -64,11 +64,7 @@ export const AuthProvider = ({ children }) => {
     };
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, logout }}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => useContext(AuthContext);

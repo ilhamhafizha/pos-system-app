@@ -1,15 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [email, setEmail] = useState("");
+
+  // 🔒 Cek session masih aktif
+  useEffect(() => {
+    if (user) {
+      const role = user.user?.role;
+      if (role === "cashier") {
+        navigate("/cashier/dashboard");
+      } else if (role === "admin") {
+        navigate("/admin/dashboard");
+      }
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try { 
+    try {
       await axios.post("http://localhost:3000/auth/reset-password/email", { email });
       Swal.fire("Berhasil", "Email ditemukan. Silakan buat password baru.", "success");
       navigate("/reset-password", { state: { email } });
@@ -38,13 +52,12 @@ const ForgotPassword = () => {
         >
           Cek Email
         </button>
-        <p className="mt-4 text-center text-sm text-gray-600">
+
         <p className="mt-4 text-center text-sm">
           Ingat password?{" "}
           <a href="/login" className="text-blue-600 hover:underline">
             Login
           </a>
-        </p>
         </p>
       </form>
     </div>

@@ -1,12 +1,37 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import axios from "axios";
+import { useAuth } from "../context/AuthContext";
 
 const ResetPassword = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const email = location.state?.email;
+
+  // Cek session active sebelum user bisa mengakses halaman reset password
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem("user"));
+    const sessionStart = localStorage.getItem("sessionStart");
+
+    if (storedUser && sessionStart) {
+      const now = Date.now();
+      const elapsed = now - parseInt(sessionStart, 10);
+      const sessionDuration = 10 * 60 * 1000; // 10 menit dalam ms
+
+      if (elapsed < sessionDuration) {
+        // Jika user masih aktif, arahkan ke dashboard sesuai role
+        const role = storedUser.user?.role;
+        if (role === "cashier") navigate("/cashier/dashboard");
+        else if (role === "admin") navigate("/admin/dashboard");
+      } else {
+        // Jika session expired, hapus data
+        localStorage.removeItem("user");
+        localStorage.removeItem("sessionStart");
+      }
+    }
+  }, [navigate]);
 
   const [form, setForm] = useState({
     password: "",

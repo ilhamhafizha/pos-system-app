@@ -1,11 +1,13 @@
 // src/pages/Register.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext"; // ← tambahkan ini
 
 const Register = () => {
   const navigate = useNavigate();
+  const { user } = useAuth(); // ← gunakan user dari context
   const [form, setForm] = useState({
     username: "",
     name: "",
@@ -14,6 +16,17 @@ const Register = () => {
     confirmPassword: "",
     active: true,
   });
+
+  useEffect(() => {
+    if (user) {
+      const role = user?.user?.role;
+      if (role === "admin") {
+        navigate("/admin/dashboard");
+      } else if (role === "cashier") {
+        navigate("/cashier/dashboard");
+      }
+    }
+  }, [user, navigate]);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -92,12 +105,10 @@ const Register = () => {
           Register
         </button>
         <p className="mt-4 text-center text-sm text-gray-600">
-          <p className="mt-4 text-center text-sm">
-            Sudah punya akun?{" "}
-            <a href="/login" className="text-blue-600 hover:underline">
-              Login
-            </a>
-          </p>
+          Sudah punya akun?{" "}
+          <a href="/login" className="text-blue-600 hover:underline">
+            Login
+          </a>
         </p>
       </form>
     </div>
