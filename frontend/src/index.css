@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+@media print {
+  @page {
+    margin: 0.5in;
+  }
+}
