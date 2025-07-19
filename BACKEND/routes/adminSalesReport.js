@@ -7,9 +7,13 @@ const PDFDocument = require('pdfkit');
 const { auth } = require('../middlewares/auth');
 
 // GET /admin/sales-report
+// ✅ GET /admin/sales-report (support filter, export, dan pagination yang benar)
 router.get('/sales-report', auth('admin'), async (req, res) => {
   try {
     const { start, finish, category, orderType, search, export: exportType } = req.query;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const offset = (page - 1) * limit;
 
     const whereClause = {};
 
@@ -47,13 +51,21 @@ router.get('/sales-report', auth('admin'), async (req, res) => {
       ]
     };
 
+    const isExport = exportType === 'excel' || exportType === 'pdf';
+
+    // ⚠️ Ambil semua data (tanpa limit) jika export, dan pakai offset-limit jika tidak
     const transactions = await TransactionGroup.findAll({
       where: whereClause,
       include: [includeItems],
       order: [['createdAt', 'DESC']]
     });
 
-    // Export Excel
+    // 💡 Hanya ambil yang memiliki TransactionItems (setelah filter kategori diterapkan)
+    const filteredTransactions = transactions.filter(tx => tx.TransactionItems.length > 0);
+    const count = filteredTransactions.length;
+    const paginatedData = filteredTransactions.slice(offset, offset + limit);
+
+    // ✅ Export Excel
     if (exportType === 'excel') {
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet('Sales Report');
@@ -76,7 +88,7 @@ router.get('/sales-report', auth('admin'), async (req, res) => {
         { header: 'Cashback', key: 'cashback', width: 10 },
       ];
 
-      transactions.forEach(tx => {
+      filteredTransactions.forEach(tx => {
         tx.TransactionItems.forEach(item => {
           worksheet.addRow({
             order_number: tx.order_number,
@@ -104,7 +116,7 @@ router.get('/sales-report', auth('admin'), async (req, res) => {
       return res.end();
     }
 
-    // Export PDF
+    // ✅ Export PDF
     if (exportType === 'pdf') {
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', 'attachment; filename=sales-report.pdf');
@@ -116,7 +128,7 @@ router.get('/sales-report', auth('admin'), async (req, res) => {
       doc.fontSize(18).text('Sales Report', { align: 'center' });
       doc.moveDown();
 
-      transactions.forEach((tx) => {
+      filteredTransactions.forEach((tx) => {
         doc
           .fontSize(12)
           .text(`Order No : ${tx.order_number}`)
@@ -150,12 +162,17 @@ router.get('/sales-report', auth('admin'), async (req, res) => {
       return;
     }
 
-
-    // Default: kirim data JSON
+    // ✅ Response default (JSON)
     res.json({
       message: "Sales report retrieved successfully",
       success: true,
-      data: transactions
+      data: paginatedData,
+      meta: {
+        total: count,
+        page,
+        perPage: limit,
+        totalPages: Math.ceil(count / limit),
+      },
     });
 
   } catch (err) {

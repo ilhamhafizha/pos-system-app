@@ -14,10 +14,17 @@ const OrderHistory = () => {
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    totalPages: 1,
+    currentPage: 1,
+    perPage: 10,
+    totalData: 0,
+  });
 
   useEffect(() => {
     fetchSales();
-  }, []);
+  }, [page]);
 
   const handleInputChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -25,6 +32,7 @@ const OrderHistory = () => {
 
   const handleSearch = () => {
     fetchSales();
+    setPage(1);
   };
 
   const handleReset = () => {
@@ -36,6 +44,7 @@ const OrderHistory = () => {
       finish: "",
     });
     fetchSales();
+    setPage(1);
   };
 
   const handleExport = async (type) => {
@@ -65,15 +74,19 @@ const OrderHistory = () => {
     try {
       setLoading(true);
       const token = JSON.parse(localStorage.getItem("user"))?.token;
-      const query = new URLSearchParams(filters).toString();
-      const res = await axios.get(`http://localhost:3000/cashier/sales-report?${query}`, {
+
+      const queryParams = new URLSearchParams({
+        ...filters,
+        page: page.toString(),
+        limit: pagination.perPage.toString(),
+      });
+
+      const res = await axios.get(`http://localhost:3000/cashier/sales-report?${queryParams}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      // ⬇️ Tambahkan console.log di sini
-      console.log("Sales response:", res.data.data);
-
       setSales(res.data.data || []);
+      setPagination(res.data.pagination || {});
     } catch (err) {
       console.error("Gagal fetch sales:", err);
     } finally {
@@ -264,7 +277,7 @@ const OrderHistory = () => {
             ) : (
               sales.map((tx, idx) => (
                 <tr key={idx} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{idx + 1}</td>
+                  <td className="p-3">{pagination.perPage * (page - 1) + idx + 1}</td>
                   <td className="p-3 font-medium">{tx.order_number}</td>
                   <td className="p-3">{formatDate(tx.createdAt)}</td>
                   <td className="p-3 capitalize">{tx.transaction_type.replace("_", " ")}</td>
@@ -286,6 +299,27 @@ const OrderHistory = () => {
             )}
           </tbody>
         </table>
+        <div className="p-4 flex justify-center items-center gap-2">
+          <button
+            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+            disabled={page === 1}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Prev
+          </button>
+
+          <span className="text-sm text-gray-700">
+            Halaman {pagination.currentPage} dari {pagination.totalPages}
+          </span>
+
+          <button
+            onClick={() => setPage((prev) => Math.min(prev + 1, pagination.totalPages))}
+            disabled={page === pagination.totalPages}
+            className="px-3 py-1 border rounded disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -193,15 +193,28 @@ const CashierDashboard = () => {
       const kembalian = cash - total;
       setChange(kembalian);
 
+      const res = await axios.get(
+        `http://localhost:3000/cashier/dashboard/orders/${orderId}/receipt`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const receiptData = res.data?.data;
+
       setReceipt({
-        customer: customerName,
-        table: orderType === "dine_in" ? tableNumber : null,
-        items: orderItems,
-        subtotal,
-        tax,
-        total,
-        cash,
-        change: kembalian,
+        order_number: receiptData.order_number,
+        customer: receiptData.customer_name,
+        table: receiptData.table !== "take away" ? receiptData.table : null,
+        items: receiptData.items.map((item) => ({
+          quantity: item.quantity,
+          catalog: { name: item.menu, price: item.price },
+        })),
+        subtotal: receiptData.subtotal,
+        tax: receiptData.tax,
+        total: receiptData.total,
+        cash: receiptData.cash,
+        change: receiptData.cashback,
+        createdAt: receiptData.createdAt,
       });
     } catch (err) {
       console.error("Gagal bayar:", err?.response?.data || err.message);
@@ -236,19 +249,20 @@ const CashierDashboard = () => {
                 selectedCategory === "all" ? true : menu.category === selectedCategory
               )
               .map((menu) => (
-                <div key={menu.id} className="bg-white p-4 rounded-xl shadow-md">
+                <div key={menu.id} className="relative bg-white p-4 rounded-xl shadow-md">
+                  <div className="absolute top-2 right-2 bg-blue-600 text-white text-xs px-2 py-1 rounded-full capitalize">
+                    {menu.category}
+                  </div>
                   <img
                     src={menu.image}
                     alt={menu.name}
                     className="w-full h-40 object-cover rounded"
                     onError={(e) => {
                       e.target.onerror = null;
-                      e.target.src = "/placeholder.jpg"; // gambar default jika gagal load
+                      e.target.src = "/placeholder.jpg";
                     }}
                   />
-
                   <h3 className="text-lg font-semibold mt-2">{menu.name}</h3>
-                  <p className="text-sm text-gray-500 capitalize">{menu.category}</p>
                   <p className="text-sm mt-1 text-gray-600">{menu.description}</p>
                   <p className="text-md font-bold mt-2 text-green-600">
                     Rp {parseInt(menu.price).toLocaleString()}
@@ -257,7 +271,9 @@ const CashierDashboard = () => {
                     onClick={() => setSelectedMenuForNote(menu)}
                     disabled={!orderId}
                     className={`mt-3 w-full text-white py-1 rounded 
-        ${orderId ? "bg-blue-500 hover:bg-blue-600" : "bg-blue-300 cursor-not-allowed"}`}
+                    ${
+                      orderId ? "bg-blue-500 hover:bg-blue-600" : "bg-blue-300 cursor-not-allowed"
+                    }`}
                   >
                     Tambah
                   </button>
@@ -446,7 +462,7 @@ const CashierDashboard = () => {
                   {/* ✅ Tombol cetak struk */}
                   <button
                     onClick={() =>
-                      navigate("/cashier/receipt", {
+                      navigate(`/cashier/receipt/${receipt.order_number}`, {
                         state: { ...receipt, createdAt: new Date().toISOString() },
                       })
                     }

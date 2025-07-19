@@ -11,9 +11,12 @@ const AdminSales = () => {
     category: "",
     orderType: "",
     search: "",
+    page: 1,
+    limit: 10,
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [meta, setMeta] = useState({ page: 1, perPage: 10, totalPages: 1 });
 
   const fetchSales = async () => {
     try {
@@ -23,7 +26,16 @@ const AdminSales = () => {
       const res = await axios.get(`http://localhost:3000/admin/sales-report?${query}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setSales(res.data.data);
+
+      const responseData = res.data;
+
+      setSales(responseData.data);
+      setMeta({
+        page: filters.page,
+        perPage: filters.limit,
+        totalPages: responseData.meta?.totalPages || 1,
+        totalData: responseData.meta?.totalData || 0,
+      });
     } catch (err) {
       console.error("Gagal fetch sales report:", err);
     } finally {
@@ -36,21 +48,28 @@ const AdminSales = () => {
   }, [filters]);
 
   const handleInputChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    setFilters({ ...filters, [e.target.name]: e.target.value, page: 1 });
   };
 
   const handleSearch = () => {
-    fetchSales();
+    setFilters({ ...filters, page: 1 });
   };
 
   const handleReset = () => {
-    setFilters({ start: "", finish: "", category: "", orderType: "", search: "" });
+    setFilters({
+      start: "",
+      finish: "",
+      category: "",
+      orderType: "",
+      search: "",
+      page: 1,
+      limit: 10,
+    });
   };
 
   const handleExport = async (type) => {
     const token = JSON.parse(localStorage.getItem("user"))?.token;
     const query = new URLSearchParams({ ...filters, export: type }).toString();
-
     try {
       const res = await axios.get(`http://localhost:3000/admin/sales-report?${query}`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -91,8 +110,6 @@ const AdminSales = () => {
   const formatDate = (str) => {
     if (!str) return "-";
     const date = new Date(str);
-
-    // Tambah offset +7 jam untuk WIB
     const offsetInMs = 7 * 60 * 60 * 1000;
     const wibDate = new Date(date.getTime() + offsetInMs);
 
@@ -250,7 +267,7 @@ const AdminSales = () => {
             ) : (
               sales.map((tx, idx) => (
                 <tr key={idx} className="border-t hover:bg-gray-50">
-                  <td className="p-3">{idx + 1}</td>
+                  <td className="p-3">{(meta.page - 1) * meta.perPage + idx + 1}</td>
                   <td className="p-3 font-medium">{tx.order_number}</td>
                   <td className="p-3">{formatDate(tx.createdAt)}</td>
                   <td className="p-3 capitalize">{tx.transaction_type.replace("_", " ")}</td>
@@ -267,6 +284,29 @@ const AdminSales = () => {
             )}
           </tbody>
         </table>
+
+        {/* PAGINATION */}
+        <div className="flex justify-between items-center mt-4 p-4">
+          <p className="text-sm text-gray-600">
+            Page {meta.page} of {meta.totalPages}
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={meta.page <= 1}
+              onClick={() => setFilters((f) => ({ ...f, page: f.page - 1 }))}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <button
+              disabled={meta.page >= meta.totalPages}
+              onClick={() => setFilters((f) => ({ ...f, page: f.page + 1 }))}
+              className="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

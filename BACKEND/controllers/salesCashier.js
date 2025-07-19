@@ -14,7 +14,9 @@ module.exports = {
         customer_name,
         transaction_type,
         start,
-        finish
+        finish,
+        page = 1,
+        limit = 10,
       } = req.query;
 
       const whereClause = {
@@ -22,15 +24,11 @@ module.exports = {
       };
 
       if (order_number) {
-        whereClause.order_number = {
-          [Op.iLike]: `%${order_number}%`
-        };
+        whereClause.order_number = { [Op.iLike]: `%${order_number}%` };
       }
 
       if (customer_name) {
-        whereClause.customer_name = {
-          [Op.iLike]: `%${customer_name}%`
-        };
+        whereClause.customer_name = { [Op.iLike]: `%${customer_name}%` };
       }
 
       if (transaction_type) {
@@ -49,9 +47,17 @@ module.exports = {
         };
       }
 
+      // ✅ Total transaksi untuk pagination
+      const totalData = await TransactionGroup.count({ where: whereClause });
+      const totalPages = Math.ceil(totalData / limit);
+      const offset = (page - 1) * limit;
+
+      // ✅ Ambil data dengan pagination
       const transactions = await TransactionGroup.findAll({
         where: whereClause,
         order: [['createdAt', 'DESC']],
+        offset: parseInt(offset),
+        limit: parseInt(limit),
         attributes: [
           'order_number',
           'createdAt',
@@ -62,68 +68,93 @@ module.exports = {
         ]
       });
 
-      if (req.query.export === 'excel') {
-        const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Cashier Sales Report');
+      // ✅ Jika export Excel atau PDF, tetap pakai semua data (tanpa limit)
+      if (req.query.export === 'excel' || req.query.export === 'pdf') {
+        const allData = await TransactionGroup.findAll({
+          where: whereClause,
+          order: [['createdAt', 'DESC']],
+          attributes: [
+            'order_number',
+            'createdAt',
+            'transaction_type',
+            'customer_name',
+            'table',
+            'total'
+          ]
+        });
 
-        worksheet.columns = [
-          { header: 'Order No', key: 'order_number', width: 15 },
-          { header: 'Date', key: 'createdAt', width: 20 },
-          { header: 'Customer', key: 'customer_name', width: 20 },
-          { header: 'Type', key: 'transaction_type', width: 10 },
-          { header: 'Table', key: 'table', width: 10 },
-          { header: 'Total', key: 'total', width: 15 }
-        ];
+        if (req.query.export === 'excel') {
+          const ExcelJS = require('exceljs');
+          const workbook = new ExcelJS.Workbook();
+          const worksheet = workbook.addWorksheet('Cashier Sales Report');
 
-        transactions.forEach(tx => {
-          worksheet.addRow({
-            order_number: tx.order_number,
-            createdAt: new Date(tx.createdAt).toLocaleString('id-ID'),
-            customer_name: tx.customer_name,
-            transaction_type: tx.transaction_type,
-            table: tx.table,
-            total: tx.total
+          worksheet.columns = [
+            { header: 'Order No', key: 'order_number', width: 15 },
+            { header: 'Date', key: 'createdAt', width: 20 },
+            { header: 'Customer', key: 'customer_name', width: 20 },
+            { header: 'Type', key: 'transaction_type', width: 10 },
+            { header: 'Table', key: 'table', width: 10 },
+            { header: 'Total', key: 'total', width: 15 }
+          ];
+
+          allData.forEach(tx => {
+            worksheet.addRow({
+              order_number: tx.order_number,
+              createdAt: new Date(tx.createdAt).toLocaleString('id-ID'),
+              customer_name: tx.customer_name,
+              transaction_type: tx.transaction_type,
+              table: tx.table,
+              total: tx.total
+            });
           });
-        });
 
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', 'attachment; filename=cashier-sales-report.xlsx');
-        await workbook.xlsx.write(res);
-        return res.end();
-      }
+          res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+          res.setHeader('Content-Disposition', 'attachment; filename=cashier-sales-report.xlsx');
+          await workbook.xlsx.write(res);
+          return res.end();
+        }
 
-      if (req.query.export === 'pdf') {
-        const doc = new PDFDocument({ margin: 30, size: 'A4' });
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=cashier-sales-report.pdf');
-        doc.pipe(res);
+        if (req.query.export === 'pdf') {
+          const PDFDocument = require('pdfkit');
+          const doc = new PDFDocument({ margin: 30, size: 'A4' });
+          res.setHeader('Content-Type', 'application/pdf');
+          res.setHeader('Content-Disposition', 'attachment; filename=cashier-sales-report.pdf');
+          doc.pipe(res);
 
-        doc.fontSize(18).text('Cashier Sales Report', { align: 'center' });
-        doc.moveDown();
-
-        transactions.forEach(tx => {
-          doc
-            .fontSize(12)
-            .text(`Order No: ${tx.order_number}`)
-            .text(`Date: ${new Date(tx.createdAt).toLocaleString('id-ID')}`)
-            .text(`Customer: ${tx.customer_name}`)
-            .text(`Type: ${tx.transaction_type}`)
-            .text(`Table: ${tx.table || '-'}`)
-            .text(`Total: Rp${tx.total.toLocaleString('id-ID')}`)
-            .moveDown();
-
-          doc.moveTo(doc.x, doc.y).lineTo(550, doc.y).stroke();
+          doc.fontSize(18).text('Cashier Sales Report', { align: 'center' });
           doc.moveDown();
-        });
 
-        doc.end();
-        return;
+          allData.forEach(tx => {
+            doc
+              .fontSize(12)
+              .text(`Order No: ${tx.order_number}`)
+              .text(`Date: ${new Date(tx.createdAt).toLocaleString('id-ID')}`)
+              .text(`Customer: ${tx.customer_name}`)
+              .text(`Type: ${tx.transaction_type}`)
+              .text(`Table: ${tx.table || '-'}`)
+              .text(`Total: Rp${tx.total.toLocaleString('id-ID')}`)
+              .moveDown();
+
+            doc.moveTo(doc.x, doc.y).lineTo(550, doc.y).stroke();
+            doc.moveDown();
+          });
+
+          doc.end();
+          return;
+        }
       }
 
+      // ✅ Response normal
       res.json({
         success: true,
         message: 'Sales report retrieved successfully',
-        data: transactions
+        data: transactions,
+        pagination: {
+          totalData,
+          totalPages,
+          currentPage: parseInt(page),
+          perPage: parseInt(limit)
+        }
       });
     } catch (err) {
       console.error(err);
@@ -133,7 +164,7 @@ module.exports = {
       });
     }
   },
-
+  
   getSalesDetailByOrderNumber: async (req, res) => {
     try {
       const { orderNumber } = req.params;

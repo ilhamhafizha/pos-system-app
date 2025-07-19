@@ -1,17 +1,84 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 
 const ReceiptPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const receipt = location.state?.receipt;
+  const { id } = useParams(); // Misal: ORD-3EC2B038
+  const [receipt, setReceipt] = useState(location.state?.receipt || null);
+  const [loading, setLoading] = useState(!receipt);
+
+  useEffect(() => {
+    if (!receipt) {
+      fetchReceipt();
+    }
+  }, []);
+
+  const fetchReceipt = async () => {
+    try {
+      const token = JSON.parse(localStorage.getItem("user"))?.token;
+      const res = await axios.get(`http://localhost:3000/cashier/sales-report/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = res.data.data;
+
+      const formattedReceipt = {
+        order_number: data.order_number,
+        createdAt: data.createdAt,
+        customer_name: data.customer_name,
+        table: data.table,
+        transaction_type: data.transaction_type,
+        subtotal: data.subtotal_group,
+        tax: data.tax,
+        total: data.total,
+        cash: data.cash,
+        cashback: data.cashback,
+        items: data.TransactionItems.map((item) => ({
+          menu: item.Catalog.name,
+          quantity: item.quantity,
+          subtotal: item.subtotal,
+        })),
+      };
+
+      setReceipt(formattedReceipt);
+      setLoading(false);
+    } catch (err) {
+      console.error("Gagal ambil data struk:", err);
+      setLoading(false);
+    }
+  };
+
+  const formatDate = (str) => {
+    if (!str) return "-";
+    const date = new Date(str);
+
+    // Tambah offset +7 jam untuk WIB
+    const offsetInMs = 7 * 60 * 60 * 1000;
+    const wibDate = new Date(date.getTime() + offsetInMs);
+
+    const day = wibDate.getDate().toString().padStart(2, "0");
+    const month = wibDate.toLocaleString("id-ID", { month: "long" });
+    const year = wibDate.getFullYear();
+    const hours = wibDate.getHours().toString().padStart(2, "0");
+    const minutes = wibDate.getMinutes().toString().padStart(2, "0");
+    const seconds = wibDate.getSeconds().toString().padStart(2, "0");
+
+    return `${day} ${month} ${year} ${hours}:${minutes}:${seconds}`;
+  };
+
+  if (loading) {
+    return <div className="p-10 text-center text-gray-500">Memuat data struk...</div>;
+  }
 
   if (!receipt) {
     return (
-      <div className="p-6 text-center">
-        <p className="text-gray-500">Data struk tidak ditemukan.</p>
+      <div className="p-10 text-center">
+        <p className="text-lg text-gray-500 mb-4">Data struk tidak ditemukan.</p>
         <button
           onClick={() => navigate(-1)}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded"
+          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           Kembali
         </button>
@@ -19,163 +86,49 @@ const ReceiptPage = () => {
     );
   }
 
-  const isFromHistory = receipt.customer_name !== undefined;
-
-  const formatFullDateTime = (dateStr) => {
-    if (!dateStr) return "-";
-    const dateUTC = new Date(dateStr);
-    const offsetMs = 7 * 60 * 60 * 1000; // GMT+7
-    const localDate = new Date(dateUTC.getTime() + offsetMs);
-
-    const datePart = localDate.toLocaleDateString("id-ID", {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
-
-    const timePart = localDate.toLocaleTimeString("id-ID", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-
-    return `${datePart} ${timePart}`;
-  };
-
-  const formatFullDate = (isoString) => {
-    const date = new Date(isoString);
-    return date.toLocaleString("id-ID", {
-      timeZone: "Asia/Jakarta",
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   return (
-    <div className="p-6 max-w-md mx-auto font-sans">
-      <h2 className="text-xl font-bold mb-4">Struk Pembayaran</h2>
+    <div className="max-w-xl mx-auto bg-white p-6 rounded shadow mt-6">
+      <h1 className="text-2xl font-bold mb-4">Struk Transaksi</h1>
+      <p>
+        No. Order: <strong>{receipt.order_number}</strong>
+      </p>
+      <p>Tanggal: {formatDate(receipt.createdAt)}</p>
+      <p>Customer: {receipt.customer_name || "-"}</p>
+      <p>Tipe: {receipt.transaction_type.replace("_", " ")}</p>
+      {receipt.transaction_type === "dine_in" && <p>Meja: {receipt.table || "-"}</p>}
+      <hr className="my-4" />
 
-      {isFromHistory ? (
-        <>
-          <p>
-            Order: <b>{receipt.order_number}</b>
-          </p>
-          <p>
-            Tanggal Order: <b>{formatFullDateTime(receipt.createdAt)}</b>
-          </p>
-          <p>
-            Customer: <b>{receipt.customer_name}</b>
-          </p>
-          {receipt.table && (
-            <p>
-              Meja: <b>{receipt.table}</b>
-            </p>
-          )}
-          <p>
-            Tipe: <b>{receipt.transaction_type?.replace("_", " ")}</b>
-          </p>
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="text-left border-b">
+            <th className="pb-2">Menu</th>
+            <th className="pb-2">Qty</th>
+            <th className="pb-2">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {receipt.items.map((item, idx) => (
+            <tr key={idx}>
+              <td>{item.menu}</td>
+              <td>{item.quantity}</td>
+              <td>Rp{item.subtotal.toLocaleString("id-ID")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
-          <ul className="mt-4 space-y-1 border-t pt-2 text-sm">
-            {receipt.items.map((item, idx) => (
-              <li key={idx} className="flex justify-between">
-                <span>
-                  {item.menu} x {item.quantity}
-                </span>
-                <span>Rp {parseInt(item.subtotal).toLocaleString()}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="mt-4 border-t pt-2 text-sm space-y-1">
-            <div className="flex justify-between">
-              <span>Subtotal</span>
-              <span>Rp {parseInt(receipt.subtotal).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>PPN (10%)</span>
-              <span>Rp {parseInt(receipt.tax).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between font-bold">
-              <span>Total</span>
-              <span>Rp {parseInt(receipt.total).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Bayar</span>
-              <span>Rp {parseInt(receipt.cash).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-green-600 font-bold">
-              <span>Kembalian</span>
-              <span>Rp {parseInt(receipt.cashback).toLocaleString()}</span>
-            </div>
-          </div>
-        </>
-      ) : (
-        <>
-          <p>Customer: {receipt.customer}</p>
-          {receipt.table && <p>Meja: {receipt.table}</p>}
-          <p>
-            Tanggal Order:{" "}
-            <b>
-              {formatFullDate(receipt.createdAt ?? (receipt.createdAt = new Date().toISOString()))}
-            </b>
-          </p>
-
-          <ul className="mt-4 space-y-1 border-t pt-2 text-sm">
-            {receipt.items.map((item, idx) => (
-              <li key={idx} className="flex justify-between">
-                <span>
-                  {item.catalog.name} x {item.quantity}
-                </span>
-                <span>Rp {(item.quantity * parseInt(item.catalog.price)).toLocaleString()}</span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Hitung subtotal & tax secara manual */}
-          {(() => {
-            const subtotal = receipt.items.reduce(
-              (sum, item) => sum + item.quantity * parseInt(item.catalog.price),
-              0
-            );
-            const tax = Math.round(subtotal * 0.1);
-            const total = subtotal + tax;
-            const change = receipt.cash - total;
-
-            return (
-              <div className="mt-4 border-t pt-2 text-sm space-y-1">
-                <div className="flex justify-between">
-                  <span>Subtotal</span>
-                  <span>Rp {subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>PPN (10%)</span>
-                  <span>Rp {tax.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>Rp {total.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Bayar</span>
-                  <span>Rp {receipt.cash.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-green-600 font-bold">
-                  <span>Kembalian</span>
-                  <span>Rp {change.toLocaleString()}</span>
-                </div>
-              </div>
-            );
-          })()}
-        </>
-      )}
+      <hr className="my-4" />
+      <div className="text-sm">
+        <p>Subtotal: Rp{receipt.subtotal.toLocaleString("id-ID")}</p>
+        <p>Tax: Rp{receipt.tax.toLocaleString("id-ID")}</p>
+        <p className="font-semibold">Total: Rp{receipt.total.toLocaleString("id-ID")}</p>
+        <p>Bayar: Rp{receipt.cash.toLocaleString("id-ID")}</p>
+        <p>Kembali: Rp{receipt.cashback.toLocaleString("id-ID")}</p>
+      </div>
 
       <button
         onClick={() => navigate(-1)}
-        className="mt-6 w-full bg-gray-700 text-white py-2 rounded hover:bg-gray-800"
+        className="mt-4 px-4 py-2 bg-gray-300 rounded hover:bg-gray-400"
       >
         Kembali
       </button>
