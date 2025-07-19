@@ -1,4 +1,3 @@
-
 # POS System Application
 
 **POS System Application** adalah sistem Point of Sale (POS) yang dibangun dengan teknologi **React**, **Express**, dan **PostgreSQL**. Aplikasi ini menyediakan fitur untuk kasir dan admin dengan autentikasi berbasis JWT dan peran (role-based) untuk memastikan kontrol akses yang tepat.
@@ -191,3 +190,4 @@ Proyek ini bertujuan untuk memudahkan proses transaksi di restoran atau toko den
 | **Struk Pembayaran Admin** | ![Struk Pembayaran Admin](https://github.com/user-attachments/assets/7e68dab9-aa3c-4eca-8d9d-ed96436948d6) |
 
 ---
+ Slide https://shorturl.at/ehg1z
