@@ -55,6 +55,7 @@ Proyek ini bertujuan untuk memudahkan proses transaksi di restoran atau toko den
 
   * Express.js
   * Sequelize (ORM)
+  * JWT
   * PostgreSQL
   * Multer (untuk upload file)
 
